@@ -1,0 +1,21 @@
+@{ ViewData["Title"] = "Trang chủ"; }
+<div class="row g-4 mt-1 justify-content-center">
+    @foreach (var card in new[]{
+        ("/PhienIn","bi-plus-circle-fill","text-primary","Tạo tem mới","Nhập liệu và in tem nhãn cho lô hàng mới"),
+        ("/LichSu/TimKiem","bi-search","text-success","Tìm kiếm & Copy","Tìm tem cũ để copy hoặc in lại nhanh"),
+        ("/LichSu","bi-clock-history","text-warning","Lịch sử in","Xem lại, lọc theo ngày, máy tính, sản phẩm"),
+        ("/MauIn/Editor","bi-layout-text-window","text-info","Cấu hình mẫu","Căn chỉnh vị trí và font chữ trên tem")
+    }) {
+    <div class="col-md-3 col-sm-6">
+        <a href="@card.Item1" class="text-decoration-none">
+            <div class="card border-0 shadow-sm h-100 card-hover">
+                <div class="card-body text-center py-5">
+                    <div class="display-3 @card.Item3 mb-3"><i class="bi @card.Item2"></i></div>
+                    <h5 class="fw-bold mb-2">@card.Item4</h5>
+                    <p class="text-muted small mb-0">@card.Item5</p>
+                </div>
+            </div>
+        </a>
+    </div>
+    }
+</div>

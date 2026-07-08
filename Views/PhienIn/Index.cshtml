@@ -1,0 +1,758 @@
+@model NhapLieuVM
+@{
+    ViewData["Title"] = "Tạo tem mới";
+    int namHienTai = DateTime.Now.Year;
+    var todayIso = DateTime.Today.ToString("yyyy-MM-dd");
+    var todayDmy = DateTime.Today.ToString("dd/MM/yyyy");
+    var copyData   = ViewBag.CopyData as string ?? "null";
+}
+@section Styles {
+<style>
+.dmy-date-wrap { position: relative; }
+.dmy-datepicker {
+    position: absolute;
+    z-index: 1080;
+    top: calc(100% + 4px);
+    left: 0;
+    width: 276px;
+    padding: 8px;
+    background: #fff;
+    border: 1px solid #ced4da;
+    border-radius: 6px;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, .18);
+}
+.dmy-datepicker-head,
+.dmy-datepicker-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+}
+.dmy-datepicker-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    margin-bottom: 6px;
+}
+.dmy-datepicker-title {
+    font-size: .875rem;
+    font-weight: 700;
+}
+.dmy-datepicker-dow {
+    font-size: .72rem;
+    font-weight: 700;
+    color: #6c757d;
+    text-align: center;
+    padding: 3px 0;
+}
+.dmy-datepicker-day {
+    border: 0;
+    border-radius: 4px;
+    background: transparent;
+    height: 30px;
+    font-size: .82rem;
+}
+.dmy-datepicker-day:hover { background: #e9ecef; }
+.dmy-datepicker-day.is-today { outline: 1px solid #0d6efd; }
+.dmy-datepicker-day.is-selected {
+    background: #0d6efd;
+    color: #fff;
+    font-weight: 700;
+}
+.dmy-datepicker-day.is-muted {
+    color: #adb5bd;
+}
+.dmy-datepicker-footer {
+    display: flex;
+    justify-content: space-between;
+    gap: 6px;
+    margin-top: 8px;
+}
+.preview-warning-list {
+    max-height: 220px;
+    overflow-y: auto;
+}
+</style>
+}
+<div class="d-flex align-items-center mb-3 gap-2 flex-wrap">
+    <h5 class="mb-0 fw-bold"><i class="bi bi-plus-circle me-2 text-primary"></i>Tạo tem mới</h5>
+    <span class="badge bg-secondary">Phiên #@Model.MaPhien</span>        
+    <span class="badge bg-light text-dark border" id="badgeTenMau" style="font-size:15px;padding:6px 10px;line-height:1;">@(Model.MauIn?.TenMau ?? "—")</span>
+    <div class="dropdown">
+        <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" 
+                id="btnDoiMauIn" data-bs-toggle="dropdown">
+            <i class="bi bi-layout-text-window me-1"></i>Đổi template
+        </button>
+        <ul class="dropdown-menu">
+            @foreach (var m in Model.DsMauIn) {
+                <li>
+                    <a class="dropdown-item @(m.MaMauIn == Model.MauIn?.MaMauIn ? "active" : "")"
+                      href="#" data-id="@m.MaMauIn">
+                        @m.TenMau
+                        @if (m.LaMacDinh) { <span class="badge bg-success ms-1" style="font-size:9px">MĐ</span> }
+                    </a>
+                </li>
+            }
+        </ul>
+    </div>
+    @if (copyData != "null") { <span class="badge bg-info text-dark"><i class="bi bi-copy me-1"></i>Copy từ tem cũ</span> }
+    <div class="ms-auto">
+        <button class="btn btn-success" id="btnXacNhan" disabled="@(Model.DsChiTiet.Count == 0)">
+            <i class="bi bi-check-circle me-1"></i>Xác nhận in (<span id="demDong">@Model.DsChiTiet.Count</span> dòng)
+        </button>
+    </div>
+</div>
+<div class="row g-3">
+  <div class="col-xl-5 col-lg-6">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-primary text-white py-2"><i class="bi bi-input-cursor-text me-2"></i>Thông tin tem</div>
+      <div class="card-body">
+        <input type="hidden" id="maPhien" value="@Model.MaPhien" />
+        <div class="row g-2 mb-2">
+          <div class="col-8">
+            <label class="form-label form-label-sm fw-semibold">Tên sản phẩm <span class="text-danger">*</span></label>
+            <input list="dsSanPham" id="tenSanPham" class="form-control form-control-sm" placeholder="Chọn hoặc nhập mới..." autocomplete="off" />
+            <datalist id="dsSanPham">
+              @foreach (var sp in Model.DsSanPham) { <option value="@sp.TenSanPham" data-code="@sp.MaCode">@sp.TenSanPham</option> }
+            </datalist>
+          </div>
+          <div class="col-4">
+            <label class="form-label form-label-sm fw-semibold">Mã code <span class="text-danger">*</span></label>
+            <input type="text" id="maCode" class="form-control form-control-sm" />
+          </div>
+        </div>
+        <div class="mb-2">
+          <label class="form-label form-label-sm fw-semibold">Phiếu sản phẩm <span class="text-danger">*</span></label>
+          <div class="input-group input-group-sm">
+            <input type="text"   id="soPhieu"  class="form-control" placeholder="Số phiếu" style="max-width:88px" />
+            <span class="input-group-text">/</span>
+            <input type="number" id="namPhieu" class="form-control" style="max-width:80px" value="@Model.StickyNamPhieu" min="2020" max="2099" />
+            <span class="input-group-text">/</span>
+            <input type="text"   id="chiNhanh" class="form-control" value="@(string.IsNullOrEmpty(Model.StickyChiNhanh)?Model.ChiNhanhMacDinh:Model.StickyChiNhanh)" />
+            <span id="warnNam" class="input-group-text text-warning d-none" title="Năm phiếu khác năm hiện tại (@namHienTai)">
+              <i class="bi bi-exclamation-triangle-fill"></i>
+            </span>
+          </div>
+          <div class="form-text">Số phiếu / Năm phiếu / Chi nhánh</div>
+        </div>
+        <div class="mb-2">
+          <label class="form-label form-label-sm fw-semibold">Loại giấy <span class="text-danger">*</span></label>
+          <input list="dsLoaiGiay" id="tenLoaiGiay" class="form-control form-control-sm" placeholder="Chọn hoặc nhập mới..." autocomplete="off" />
+          <datalist id="dsLoaiGiay">
+            @foreach (var lg in Model.DsLoaiGiay) { <option value="@lg" /> }
+          </datalist>
+        </div>
+        <div class="row g-2 mb-2">
+          <div class="col-4">
+            <label class="form-label form-label-sm fw-semibold">Số lượng SP/1 tem <span class="text-danger">*</span></label>
+            <input type="number" id="soLuongSp" class="form-control form-control-sm" min="1" />
+          </div>
+          <div class="col-4">
+            <label class="form-label form-label-sm fw-semibold">Số lượng PSP</label>
+            <input type="number" id="soLuongPSP" class="form-control form-control-sm" min="1" />
+          </div>
+          <div class="col-4">
+            <label class="form-label form-label-sm fw-semibold">Số lượng tem cần in <span class="text-danger">*</span></label>
+            <input type="number" id="soLuongNhan" class="form-control form-control-sm" min="1" />
+          </div>
+        </div>
+        <div class="row g-2 mb-2">
+          <div class="col-6">
+            <label class="form-label form-label-sm fw-semibold d-flex align-items-center gap-1">
+              <span>Ca sản xuất</span>
+              <span id="warnCaBadge" class="badge bg-warning text-dark d-none"><i class="bi bi-exclamation-triangle-fill me-1"></i>Chưa chọn</span>
+            </label>
+            <select id="maCa" class="form-select form-select-sm">
+              <option value="">— Không chọn —</option>
+              @foreach (var ca in Model.DsCa) { <option value="@ca.MaCa">@ca.TenCa</option> }
+            </select>
+            <div id="warnCaText" class="form-text text-warning fw-semibold d-none">Chưa chọn ca sản xuất. Vui lòng kiểm tra trước khi thêm/in tem.</div>
+          </div>
+          <div class="col-6">
+            <label class="form-label form-label-sm fw-semibold d-flex align-items-center gap-1">
+              <span>Ngày sản xuất</span>
+              <span id="warnNgayBadge" class="badge bg-warning text-dark d-none"><i class="bi bi-exclamation-triangle-fill me-1"></i>Chưa chọn</span>
+            </label>
+            <div class="dmy-date-wrap">
+              <div class="input-group input-group-sm">
+                <input type="text" id="ngaySanXuat" class="form-control" placeholder="dd/mm/yyyy" inputmode="none" autocomplete="off" readonly />
+                <input type="hidden" id="ngaySanXuatIso" />
+                <button class="btn btn-outline-secondary" type="button" id="btnNgaySanXuat" title="Chọn ngày sản xuất">
+                  <i class="bi bi-calendar3"></i>
+                </button>
+              </div>
+              <div id="ngaySanXuatPicker" class="dmy-datepicker d-none"></div>
+            </div>
+            <div id="ngaySanXuatFmt" class="form-text text-muted">Định dạng: dd/mm/yyyy</div>
+            <div id="warnNgayText" class="form-text text-warning fw-semibold d-none"></div>
+          </div>
+        </div>
+        <div class="row g-2 mb-3">
+          <div class="col-6">
+            <label class="form-label form-label-sm fw-semibold">Người kiểm</label>
+            <input type="text" id="nguoiKiem" class="form-control form-control-sm" />
+          </div>
+          <div class="col-6">
+            <label class="form-label form-label-sm fw-semibold">Người đóng gói</label>
+            <input type="text" id="nguoiDongGoi" class="form-control form-control-sm" />
+          </div>
+          <div class="col-12 mt-2">
+            <label class="form-label form-label-sm fw-semibold">Ghi chú</label>
+            <input type="text" id="ghiChu" class="form-control form-control-sm" />
+          </div>
+        </div>
+        <div id="reviewMsg" class="alert alert-warning py-1 px-2 small d-none mb-2">
+          <i class="bi bi-eye me-1"></i><span></span>
+        </div>
+        <div class="d-grid">
+          <button class="btn btn-primary" id="btnThem"><i class="bi bi-plus-lg me-1"></i>Thêm vào danh sách</button>
+        </div>
+        <div id="formMsg" class="mt-2"></div>
+      </div>
+    </div>
+  </div>
+  <div class="col-xl-7 col-lg-6">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-header bg-white py-2 d-flex align-items-center justify-content-between">
+        <span class="fw-semibold"><i class="bi bi-table me-2 text-primary"></i>Danh sách tem trong phiên</span>
+        <div class="d-flex gap-3 text-muted small">
+          <span>Nhãn: <strong class="text-dark" id="tongNhan">@Model.TongNhan</strong></span>
+          <span>Trang: <strong class="text-dark" id="tongTrang">@Model.TongTrang</strong></span>
+        </div>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-sm table-hover mb-0">
+            <thead class="table-light">
+              <tr>
+                <th style="width:36px">STT</th><th>Tên SP</th><th>Mã code</th><th>Phiếu SP</th>
+                <th class="text-end">SL SP/1 tem</th><th class="text-end">SL Tem cần in</th><th class="text-end">Trang</th>
+                <th style="width:36px"></th>
+              </tr>
+            </thead>
+            <tbody id="tbodyChiTiet">
+              @foreach (var ct in Model.DsChiTiet) {
+              <tr data-id="@ct.MaChiTiet"
+                  data-ten-san-pham="@ct.TenSanPham"
+                  data-ma-code="@ct.MaCode"
+                  data-so-phieu="@ct.SoPhieu"
+                  data-nam-phieu="@ct.NamPhieu"
+                  data-chi-nhanh="@ct.ChiNhanh"
+                  data-ten-loai-giay="@ct.TenLoaiGiay"
+                  data-so-luong-san-pham="@ct.SoLuongSanPham"
+                  data-so-luong-nhan="@ct.SoLuongNhan"
+                  data-so-luong-psp="@ct.SoLuongPsp"
+                  data-ma-ca="@ct.MaCa"
+                  data-ngay-san-xuat="@(ct.NgaySanXuat?.ToString("yyyy-MM-dd"))"
+                  data-nguoi-kiem="@ct.NguoiKiem"
+                  data-nguoi-dong-goi="@ct.NguoiDongGoi"
+                  data-ghi-chu="@ct.GhiChu"
+                  style="cursor:pointer">
+                <td>@ct.Stt</td>
+                <td class="text-truncate" style="max-width:130px" title="@ct.TenSanPham">@ct.TenSanPham</td>
+                <td>@ct.MaCode</td><td class="small text-muted">@ct.PhieuSanPham</td>
+                <td class="text-end">@ct.SoLuongSanPham</td><td class="text-end">@ct.SoLuongNhan</td>
+                <td class="text-end">@ct.SoTrang</td>
+                <td><button class="btn btn-xs btn-outline-danger btn-xoa" data-id="@ct.MaChiTiet"><i class="bi bi-x"></i></button></td>
+              </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        @if (!Model.DsChiTiet.Any()) {
+          <div class="text-center text-muted py-5" id="emptyMsg">
+            <i class="bi bi-inbox display-6 d-block mb-2"></i>Chưa có dòng nào.
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="modalXacNhan" tabindex="-1">
+  <div class="modal-dialog"><div class="modal-content">
+    <div class="modal-header py-2">
+      <h6 class="modal-title"><i class="bi bi-printer me-2"></i>Xác nhận in</h6>
+      <button class="btn-close btn-sm" data-bs-dismiss="modal"></button>
+    </div>
+    <div class="modal-body">
+      <div>In <strong id="xnNhan">0</strong> nhãn / <strong id="xnTrang">0</strong> trang?</div>
+      <div id="previewWarningBox" class="alert alert-warning py-2 px-2 small mt-2 mb-0 d-none">
+        <div class="fw-semibold mb-1"><i class="bi bi-exclamation-triangle-fill me-1"></i>Cần kiểm tra trước khi sang preview</div>
+        <div id="previewWarningSummary" class="mb-1"></div>
+        <ul id="previewWarningList" class="preview-warning-list mb-0 ps-3"></ul>
+      </div>
+    </div>
+    <div class="modal-footer py-2">
+      <button class="btn btn-secondary btn-sm" id="btnCancelPreview" data-bs-dismiss="modal">Hủy</button>
+      <button class="btn btn-success btn-sm" id="btnOK"><i class="bi bi-check-circle me-1"></i>Xác nhận & In</button>
+    </div>
+  </div></div>
+</div>
+
+@section Scripts {
+<script>
+const MP = parseInt(document.getElementById('maPhien').value), NH = @namHienTai, TODAY = '@todayIso', TODAY_DMY = '@todayDmy', CP = @Html.Raw(copyData);
+let currentMauIn = @(Model.MauIn?.MaMauIn ?? 0);
+let soNhanMoiTrang = @(Model.MauIn?.SoNhanMoiTrang ?? 8);
+let reviewingRowId = null;
+
+const spMap = {};
+@foreach(var sp in Model.DsSanPham) {
+    <text>spMap[@Json.Serialize(sp.TenSanPham)] = @Json.Serialize(sp.MaCode);</text>
+}
+
+const G   = id => document.getElementById(id);
+const V   = id => (G(id)?.value ?? '').trim();
+const SV  = (id, v) => { const e = G(id); if (e) e.value = v ?? ''; };
+const IV  = id => parseInt(G(id)?.value) || 0;
+const IVN = id => { const x = V(id); return x ? +x : null; };
+const ESC = v => String(v ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+const ATTR = ESC;
+const isoToDmy = iso => {
+    if (!iso) return '';
+    const m = String(iso).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    return m ? `${m[3]}/${m[2]}/${m[1]}` : iso;
+};
+const toIso = date =>
+    `${date.getFullYear().toString().padStart(4,'0')}-${(date.getMonth() + 1).toString().padStart(2,'0')}-${date.getDate().toString().padStart(2,'0')}`;
+const dateFromIso = iso => {
+    const m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    return m ? new Date(+m[1], +m[2] - 1, +m[3]) : null;
+};
+function createDmyDatePicker({ inputId, hiddenId, pickerId, buttonId, onChange }) {
+    const input = G(inputId);
+    const hidden = G(hiddenId);
+    const picker = G(pickerId);
+    const button = G(buttonId);
+    let selectedIso = hidden.value || '';
+    let viewDate = dateFromIso(selectedIso) || new Date();
+    const dow = ['T2','T3','T4','T5','T6','T7','CN'];
+
+    function setValue(iso, notify = true) {
+        selectedIso = iso || '';
+        hidden.value = selectedIso;
+        input.value = selectedIso ? isoToDmy(selectedIso) : '';
+        render();
+        if (notify) {
+            hidden.dispatchEvent(new Event('input', { bubbles: true }));
+            onChange?.(selectedIso);
+        }
+    }
+    function close() { picker.classList.add('d-none'); }
+    function open() { render(); picker.classList.remove('d-none'); }
+    function toggle() { picker.classList.contains('d-none') ? open() : close(); }
+    function render() {
+        const y = viewDate.getFullYear();
+        const m = viewDate.getMonth();
+        const first = new Date(y, m, 1);
+        const startOffset = (first.getDay() + 6) % 7;
+        const start = new Date(y, m, 1 - startOffset);
+        const todayIso = TODAY;
+        let html = `
+            <div class="dmy-datepicker-nav">
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-act="prev"><i class="bi bi-chevron-left"></i></button>
+                <div class="dmy-datepicker-title">Tháng ${m + 1}/${y}</div>
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-act="next"><i class="bi bi-chevron-right"></i></button>
+            </div>
+            <div class="dmy-datepicker-head">${dow.map(x => `<div class="dmy-datepicker-dow">${x}</div>`).join('')}</div>
+            <div class="dmy-datepicker-grid">`;
+        for (let i = 0; i < 42; i++) {
+            const d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
+            const iso = toIso(d);
+            const cls = [
+                'dmy-datepicker-day',
+                d.getMonth() !== m ? 'is-muted' : '',
+                iso === todayIso ? 'is-today' : '',
+                iso === selectedIso ? 'is-selected' : ''
+            ].filter(Boolean).join(' ');
+            html += `<button type="button" class="${cls}" data-date="${iso}">${d.getDate()}</button>`;
+        }
+        picker.innerHTML = html + `</div>
+            <div class="dmy-datepicker-footer">
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-act="clear">Xóa</button>
+                <button type="button" class="btn btn-sm btn-outline-primary" data-act="today">Hôm nay</button>
+            </div>`;
+    }
+
+    input.addEventListener('click', open);
+    button.addEventListener('click', toggle);
+    picker.addEventListener('click', e => {
+        const act = e.target.closest('[data-act]')?.dataset.act;
+        if (act === 'prev') { viewDate = new Date(viewDate.getFullYear(), viewDate.getMonth() - 1, 1); render(); return; }
+        if (act === 'next') { viewDate = new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 1); render(); return; }
+        if (act === 'today') { viewDate = dateFromIso(TODAY); setValue(TODAY); close(); return; }
+        if (act === 'clear') { setValue(''); close(); return; }
+        const date = e.target.closest('[data-date]')?.dataset.date;
+        if (date) { viewDate = dateFromIso(date); setValue(date); close(); }
+    });
+    document.addEventListener('click', e => {
+        if (!picker.contains(e.target) && !input.contains(e.target) && !button.contains(e.target)) close();
+    });
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape') close();
+    });
+    setValue(selectedIso, false);
+    return { set: setValue, clear: () => setValue(''), getIso: () => hidden.value };
+}
+const MSG = (t, tp) => {
+    const e = G('formMsg');
+    e.innerHTML = `<div class="alert alert-${tp} py-1 px-2 small">${t}</div>`;
+    setTimeout(() => e.innerHTML = '', 3000);
+};
+const POST = async (u, d) => fetch(u, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(d)
+}).then(r => r.json());
+
+// Auto-fill mã code khi chọn tên SP
+G('tenSanPham').addEventListener('input', function () {
+    const c = spMap[this.value];
+    if (c) G('maCode').value = c;
+});
+
+// Cảnh báo năm phiếu
+G('namPhieu').addEventListener('input', function () {
+    G('warnNam').classList.toggle('d-none', +this.value === NH);
+});
+if (+V('namPhieu') !== NH) G('warnNam').classList.remove('d-none');
+
+// Cảnh báo ca sản xuất
+function updateCaWarning() {
+    const show = !V('maCa');
+    G('warnCaBadge').classList.toggle('d-none', !show);
+    G('warnCaText').classList.toggle('d-none', !show);
+    G('maCa').classList.toggle('border-warning', show);
+    G('maCa').classList.toggle('bg-warning-subtle', show);
+}
+G('maCa').addEventListener('change', updateCaWarning);
+updateCaWarning();
+
+// Cảnh báo ngày sản xuất
+function updateNgayWarning() {
+    const ngay = V('ngaySanXuatIso');
+    const badge = G('warnNgayBadge');
+    const text = G('warnNgayText');
+    const input = G('ngaySanXuat');
+    const hint = G('ngaySanXuatFmt');
+
+    let msg = '';
+    let badgeText = '';
+    if (!ngay) {
+        badgeText = 'Chưa chọn';
+        msg = `Chưa chọn ngày sản xuất. Vui lòng kiểm tra trước khi thêm/in tem.`;
+    } else if (ngay !== TODAY) {
+        badgeText = 'Khác hôm nay';
+        msg = `Ngày sản xuất đang là ${isoToDmy(ngay)}, khác ngày hôm nay (${TODAY_DMY}). Vui lòng kiểm tra lại.`;
+    }
+
+    hint.textContent = ngay ? `Đã chọn: ${isoToDmy(ngay)}` : 'Định dạng hiển thị: dd/mm/yyyy';
+
+    const show = msg !== '';
+    badge.classList.toggle('d-none', !show);
+    text.classList.toggle('d-none', !show);
+    input.classList.toggle('border-warning', show);
+    input.classList.toggle('bg-warning-subtle', show);
+    if (show) {
+        badge.innerHTML = `<i class="bi bi-exclamation-triangle-fill me-1"></i>${badgeText}`;
+        text.textContent = msg;
+    }
+}
+const ngaySanXuatPicker = createDmyDatePicker({
+    inputId: 'ngaySanXuat',
+    hiddenId: 'ngaySanXuatIso',
+    pickerId: 'ngaySanXuatPicker',
+    buttonId: 'btnNgaySanXuat',
+    onChange: updateNgayWarning
+});
+updateNgayWarning();
+
+// Auto-fill số lượng nhãn từ PSP
+function tinhSoLuongNhan() {
+    const psp = parseFloat(G('soLuongPSP')?.value) || 0;
+    const sp  = parseFloat(G('soLuongSp')?.value)  || 0;
+    if (psp <= 0 || sp <= 0) return;
+    const raw   = Math.ceil(psp / sp);
+    const final = Math.ceil(raw / soNhanMoiTrang) * soNhanMoiTrang;
+    SV('soLuongNhan', final);
+}
+G('soLuongPSP').addEventListener('input', tinhSoLuongNhan);
+G('soLuongSp').addEventListener('input',  tinhSoLuongNhan);
+
+// Fill dữ liệu copy
+if (CP) {
+    ['tenSanPham','maCode','soPhieu','chiNhanh','tenLoaiGiay','nguoiKiem','nguoiDongGoi','ghiChu']
+        .forEach(k => { if (CP[k] !== undefined && CP[k] !== null) SV(k, CP[k]); });
+    ngaySanXuatPicker.set(CP.ngaySanXuat);
+    SV('namPhieu',   CP.namPhieu);
+    SV('soLuongSp',  CP.soLuongSp);
+    SV('soLuongNhan',CP.soLuongNhan);
+    SV('soLuongPSP',  CP.soLuongPsp);
+    G('namPhieu').dispatchEvent(new Event('input'));
+    updateNgayWarning();
+}
+
+// Thêm dòng
+G('btnThem').addEventListener('click', async () => {
+    if (reviewingRowId !== null) {
+        MSG('Đang xem lại dòng đã thêm. Muốn sửa, hãy xóa dòng đó trước.', 'warning');
+        return;
+    }
+    const ngayIso = V('ngaySanXuatIso') || null;
+    const req = {
+        maPhien: MP, loaiTao: CP ? 'copy' : 'moi', maLichSuGoc: CP?.maLichSuGoc || null,
+        tenSanPham: V('tenSanPham'), maCode: V('maCode'), soPhieu: V('soPhieu'),
+        namPhieu: IV('namPhieu'), chiNhanh: V('chiNhanh'), tenLoaiGiay: V('tenLoaiGiay'),
+        soLuongSanPham: IV('soLuongSp'), soLuongNhan: IV('soLuongNhan'),
+        maCa: IVN('maCa'), ngaySanXuat: ngayIso,
+        nguoiKiem: V('nguoiKiem') || null, nguoiDongGoi: V('nguoiDongGoi') || null,
+        soLuongPsp: IV('soLuongPSP') || null, ghiChu: V('ghiChu') || null
+    };
+    if (!req.tenSanPham || !req.maCode || !req.soPhieu || !req.tenLoaiGiay || req.soLuongSanPham <= 0 || req.soLuongNhan <= 0) {
+        MSG('Vui lòng điền đầy đủ các trường bắt buộc (*)', 'danger');
+        return;
+    }
+    const b = G('btnThem');
+    b.disabled = true;
+    b.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Đang thêm...';
+    const res = await POST('/PhienIn/ThemDong', req);
+    b.disabled = false;
+    b.innerHTML = '<i class="bi bi-plus-lg me-1"></i>Thêm vào danh sách';
+    if (res.success) { addRow(res.data); calcT(); MSG(res.message, 'success'); clearF(req); }
+    else MSG(res.message, 'danger');
+});
+
+// Xóa dòng
+G('tbodyChiTiet').addEventListener('click', async e => {
+    const b = e.target.closest('.btn-xoa');
+    if (b) {
+        if (!confirm('Xóa dòng này?')) return;
+        const id = +b.dataset.id;
+        const res = await POST('/PhienIn/XoaDong', { maChiTiet: id, maPhien: MP });
+        if (res.success) {
+            const wasReviewing = reviewingRowId === id;
+            b.closest('tr').remove();
+            if (wasReviewing) clearReviewMode(false);
+            reNum(); calcT(); updBtn();
+            if (!document.querySelector('#tbodyChiTiet tr'))
+                G('tbodyChiTiet').closest('.card-body').insertAdjacentHTML('beforeend',
+                    '<div class="text-center text-muted py-5" id="emptyMsg"><i class="bi bi-inbox display-6 d-block mb-2"></i>Chưa có dòng nào.</div>');
+            MSG(wasReviewing ? 'Đã xóa dòng đang xem. Có thể chỉnh thông tin và thêm lại.' : 'Đã xóa dòng.', 'success');
+        } else MSG(res.message, 'danger');
+        return;
+    }
+
+    const tr = e.target.closest('tr[data-id]');
+    if (tr) viewRow(tr);
+});
+
+// Xác nhận in
+G('btnXacNhan').addEventListener('click', () => {
+    G('xnNhan').textContent  = G('tongNhan').textContent;
+    G('xnTrang').textContent = G('tongTrang').textContent;
+    renderPreviewWarnings(collectPreviewWarnings());
+    new bootstrap.Modal(G('modalXacNhan')).show();
+});
+G('btnOK').addEventListener('click', async () => {
+    bootstrap.Modal.getInstance(G('modalXacNhan')).hide();
+    location.href = '/PhienIn/Print?maPhien=' + MP;
+});
+
+function collectPreviewWarnings() {
+    const warnings = [];
+    document.querySelectorAll('#tbodyChiTiet tr[data-id]').forEach((tr, idx) => {
+        const d = tr.dataset;
+        const stt = tr.cells[0]?.textContent?.trim() || (idx + 1).toString();
+        const tenSp = tr.cells[1]?.textContent?.trim() || d.tenSanPham || '';
+        const issues = [];
+
+        if (!String(d.maCa || '').trim()) {
+            issues.push('chưa chọn ca sản xuất');
+        }
+        if (!String(d.ngaySanXuat || '').trim()) {
+            issues.push('chưa chọn ngày sản xuất');
+        } else if (d.ngaySanXuat !== TODAY) {
+            issues.push(`ngày sản xuất ${isoToDmy(d.ngaySanXuat)} khác hôm nay ${TODAY_DMY}`);
+        }
+
+        if (issues.length) warnings.push({ stt, tenSp, issues });
+    });
+    return warnings;
+}
+
+function renderPreviewWarnings(warnings) {
+    const box = G('previewWarningBox');
+    const summary = G('previewWarningSummary');
+    const list = G('previewWarningList');
+    const cancel = G('btnCancelPreview');
+    const ok = G('btnOK');
+
+    if (!warnings.length) {
+        box.classList.add('d-none');
+        summary.textContent = '';
+        list.innerHTML = '';
+        cancel.textContent = 'Hủy';
+        ok.className = 'btn btn-success btn-sm';
+        ok.innerHTML = '<i class="bi bi-check-circle me-1"></i>Xác nhận & In';
+        return;
+    }
+
+    const missingShift = warnings.filter(w => w.issues.some(x => x.includes('ca sản xuất'))).length;
+    const missingDate = warnings.filter(w => w.issues.some(x => x.includes('chưa chọn ngày'))).length;
+    const differentDate = warnings.filter(w => w.issues.some(x => x.includes('khác hôm nay'))).length;
+    const parts = [];
+    if (missingShift) parts.push(`${missingShift} dòng chưa chọn ca`);
+    if (missingDate) parts.push(`${missingDate} dòng chưa chọn ngày`);
+    if (differentDate) parts.push(`${differentDate} dòng ngày khác hôm nay`);
+
+    box.classList.remove('d-none');
+    summary.textContent = parts.join(', ') + '.';
+    list.innerHTML = warnings.map(w =>
+        `<li><strong>STT ${ESC(w.stt)}</strong>${w.tenSp ? ` - ${ESC(w.tenSp)}` : ''}: ${ESC(w.issues.join('; '))}</li>`
+    ).join('');
+    cancel.textContent = 'Quay lại kiểm tra';
+    ok.className = 'btn btn-warning btn-sm';
+    ok.innerHTML = '<i class="bi bi-eye me-1"></i>Vẫn sang preview';
+}
+
+// Thêm row vào bảng
+function addRow(ct) {
+    G('emptyMsg')?.remove();
+    G('tbodyChiTiet').insertAdjacentHTML('beforeend',
+        `<tr data-id="${ct.maChiTiet}"
+             data-ten-san-pham="${ATTR(ct.tenSanPham)}"
+             data-ma-code="${ATTR(ct.maCode)}"
+             data-so-phieu="${ATTR(ct.soPhieu)}"
+             data-nam-phieu="${ATTR(ct.namPhieu)}"
+             data-chi-nhanh="${ATTR(ct.chiNhanh)}"
+             data-ten-loai-giay="${ATTR(ct.tenLoaiGiay)}"
+             data-so-luong-san-pham="${ATTR(ct.soLuongSanPham)}"
+             data-so-luong-nhan="${ATTR(ct.soLuongNhan)}"
+             data-so-luong-psp="${ATTR(ct.soLuongPsp)}"
+             data-ma-ca="${ATTR(ct.maCa)}"
+             data-ngay-san-xuat="${ATTR(ct.ngaySanXuat)}"
+             data-nguoi-kiem="${ATTR(ct.nguoiKiem)}"
+             data-nguoi-dong-goi="${ATTR(ct.nguoiDongGoi)}"
+             data-ghi-chu="${ATTR(ct.ghiChu)}"
+             style="cursor:pointer">
+            <td>${ct.stt}</td>
+            <td class="text-truncate" style="max-width:130px" title="${ATTR(ct.tenSanPham)}">${ESC(ct.tenSanPham)}</td>
+            <td>${ESC(ct.maCode)}</td>
+            <td class="small text-muted">${ESC(ct.soPhieu)}/${ESC(ct.namPhieu)}/${ESC(ct.chiNhanh)}</td>
+            <td class="text-end">${ct.soLuongSanPham}</td>
+            <td class="text-end">${ct.soLuongNhan}</td>
+            <td class="text-end">${ct.soTrang}</td>
+            <td><button class="btn btn-xs btn-outline-danger btn-xoa" data-id="${ct.maChiTiet}"><i class="bi bi-x"></i></button></td>
+        </tr>`);
+    updBtn();
+}
+
+function viewRow(tr) {
+    const d = tr.dataset;
+    reviewingRowId = +d.id;
+
+    SV('tenSanPham', d.tenSanPham);
+    SV('maCode', d.maCode);
+    SV('soPhieu', d.soPhieu);
+    SV('namPhieu', d.namPhieu);
+    SV('chiNhanh', d.chiNhanh);
+    SV('tenLoaiGiay', d.tenLoaiGiay);
+    SV('soLuongSp', d.soLuongSanPham);
+    SV('soLuongNhan', d.soLuongNhan);
+    SV('soLuongPSP', d.soLuongPsp);
+    SV('maCa', d.maCa);
+    ngaySanXuatPicker.set(d.ngaySanXuat);
+    SV('nguoiKiem', d.nguoiKiem);
+    SV('nguoiDongGoi', d.nguoiDongGoi);
+    SV('ghiChu', d.ghiChu);
+
+    G('namPhieu').dispatchEvent(new Event('input'));
+    G('maCa').dispatchEvent(new Event('change'));
+    updateNgayWarning();
+
+    document.querySelectorAll('#tbodyChiTiet tr').forEach(x => x.classList.remove('table-warning'));
+    tr.classList.add('table-warning');
+
+    const btn = G('btnThem');
+    btn.disabled = true;
+    btn.title = 'Đang xem lại dòng đã thêm. Muốn sửa, hãy xóa dòng này trước.';
+
+    const msg = G('reviewMsg');
+    msg.querySelector('span').textContent = `Đang xem lại dòng STT ${tr.cells[0]?.textContent || ''}. Muốn sửa, hãy xóa dòng này trong danh sách rồi chỉnh thông tin và thêm lại.`;
+    msg.classList.remove('d-none');
+}
+
+function clearReviewMode(clearForm = false) {
+    reviewingRowId = null;
+    document.querySelectorAll('#tbodyChiTiet tr').forEach(x => x.classList.remove('table-warning'));
+    const btn = G('btnThem');
+    btn.disabled = false;
+    btn.title = '';
+    G('reviewMsg').classList.add('d-none');
+    if (clearForm) clearF({ namPhieu: NH, chiNhanh: V('chiNhanh') });
+}
+
+function calcT() {
+    let n = 0, t = 0;
+    document.querySelectorAll('#tbodyChiTiet tr').forEach(r => {
+        const c = r.querySelectorAll('td');
+        n += +c[5]?.textContent || 0;
+        t += +c[6]?.textContent || 0;
+    });
+    G('tongNhan').textContent  = n;
+    G('tongTrang').textContent = t;
+}
+
+function reNum() {
+    document.querySelectorAll('#tbodyChiTiet tr td:first-child').forEach((td, i) => td.textContent = i + 1);
+}
+
+function updBtn() {
+    const n = document.querySelectorAll('#tbodyChiTiet tr').length;
+    G('btnXacNhan').disabled = n === 0;
+    G('demDong').textContent = n;
+}
+
+function clearF(p) {
+    ['tenSanPham','maCode','soPhieu','tenLoaiGiay','soLuongSp','soLuongNhan',
+     'soLuongPSP','nguoiKiem','nguoiDongGoi','ghiChu']
+        .forEach(id => SV(id, ''));
+    ngaySanXuatPicker.clear();
+    G('maCa').value = '';
+    SV('namPhieu', p.namPhieu);
+    SV('chiNhanh',  p.chiNhanh);
+    G('namPhieu').dispatchEvent(new Event('input'));
+    G('maCa').dispatchEvent(new Event('change'));
+    updateNgayWarning();
+}
+
+// Đổi template
+document.querySelectorAll('.dropdown-menu [data-id]').forEach(a => {
+    a.addEventListener('click', async e => {
+        e.preventDefault();
+        const maMauIn = +a.dataset.id;
+        if (maMauIn === currentMauIn) return;
+        const res = await POST('/PhienIn/DoiMauIn', { maPhien: MP, maMauIn });
+        if (res.success) {
+            currentMauIn = maMauIn;
+            MSG(res.message, 'success');
+            G('badgeTenMau').textContent = res.message.replace('Đã đổi template sang: ', '');
+            document.querySelectorAll('.dropdown-menu [data-id]').forEach(x =>
+                x.classList.toggle('active', +x.dataset.id === maMauIn));
+            try {
+                const payload = JSON.parse(res.data);
+                soNhanMoiTrang = payload.soNhanMoiTrang;
+                tinhSoLuongNhan();
+                document.querySelectorAll('#tbodyChiTiet tr').forEach(tr => {
+                    const id = +tr.dataset.id;
+                    if (payload.soTrang[id] !== undefined)
+                        tr.querySelectorAll('td')[6].textContent = payload.soTrang[id];
+                });
+                calcT();
+            } catch {}
+        } else MSG(res.message, 'danger');
+    });
+});
+</script>
+}

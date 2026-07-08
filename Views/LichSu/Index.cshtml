@@ -1,0 +1,340 @@
+@model LichSuVM
+@{ ViewData["Title"] = "Lịch sử in"; }
+@section Styles {
+    <style>
+    /* Nhắm trực tiếp vào các ô th bên trong thead của bảng sticky */
+    .table-sticky thead th {
+        position: sticky;
+        top: 0;
+        z-index: 10; /* Giữ header luôn nổi lên trên hàng dữ liệu */
+        background-color: #f8f9fa !important; /* Đây là màu của class table-light */
+        box-shadow: 0 1px 0 #dee2e6; /* thay border-bottom bị mất khi sticky */
+    }
+    .dmy-date-wrap { position: relative; }
+    .dmy-datepicker {
+        position: absolute;
+        z-index: 1080;
+        top: calc(100% + 4px);
+        left: 0;
+        width: 276px;
+        padding: 8px;
+        background: #fff;
+        border: 1px solid #ced4da;
+        border-radius: 6px;
+        box-shadow: 0 8px 24px rgba(15, 23, 42, .18);
+    }
+    .dmy-datepicker-head,
+    .dmy-datepicker-grid {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 2px;
+    }
+    .dmy-datepicker-nav {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 6px;
+        margin-bottom: 6px;
+    }
+    .dmy-datepicker-title {
+        font-size: .875rem;
+        font-weight: 700;
+    }
+    .dmy-datepicker-dow {
+        font-size: .72rem;
+        font-weight: 700;
+        color: #6c757d;
+        text-align: center;
+        padding: 3px 0;
+    }
+    .dmy-datepicker-day {
+        border: 0;
+        border-radius: 4px;
+        background: transparent;
+        height: 30px;
+        font-size: .82rem;
+    }
+    .dmy-datepicker-day:hover { background: #e9ecef; }
+    .dmy-datepicker-day.is-today { outline: 1px solid #0d6efd; }
+    .dmy-datepicker-day.is-selected {
+        background: #0d6efd;
+        color: #fff;
+        font-weight: 700;
+    }
+    .dmy-datepicker-day.is-muted { color: #adb5bd; }
+    .dmy-datepicker-footer {
+        display: flex;
+        justify-content: space-between;
+        gap: 6px;
+        margin-top: 8px;
+    }
+    </style>
+}
+<div class="d-flex align-items-center mb-3">
+    <h5 class="mb-0 fw-bold"><i class="bi bi-clock-history me-2 text-warning"></i>Lịch sử in tem</h5>
+</div>
+<div class="card border-0 shadow-sm mb-3">
+    <div class="card-body py-2">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-2">
+                <label class="form-label form-label-sm mb-1">Từ ngày</label>
+                <div class="dmy-date-wrap">
+                    <div class="input-group input-group-sm">
+                        <input type="text" id="tuNgayPickerInput" class="form-control" placeholder="dd/mm/yyyy" inputmode="none" autocomplete="off" readonly />
+                        <input type="hidden" id="tuNgayIso" name="tuNgay" value="@Model.TuNgay" />
+                        <button class="btn btn-outline-secondary" type="button" id="btnTuNgay" title="Chọn từ ngày"><i class="bi bi-calendar3"></i></button>
+                    </div>
+                    <div id="tuNgayPicker" class="dmy-datepicker d-none"></div>
+                </div>
+                @*<div class="form-text text-muted">Định dạng: dd/mm/yyyy</div>*@
+            </div>
+            <div class="col-md-2">
+                <label class="form-label form-label-sm mb-1">Đến ngày</label>
+                <div class="dmy-date-wrap">
+                    <div class="input-group input-group-sm">
+                        <input type="text" id="denNgayPickerInput" class="form-control" placeholder="dd/mm/yyyy" inputmode="none" autocomplete="off" readonly />
+                        <input type="hidden" id="denNgayIso" name="denNgay" value="@Model.DenNgay" />
+                        <button class="btn btn-outline-secondary" type="button" id="btnDenNgay" title="Chọn đến ngày"><i class="bi bi-calendar3"></i></button>
+                    </div>
+                    <div id="denNgayPicker" class="dmy-datepicker d-none"></div>
+                </div>
+                @*<div class="form-text text-muted">Định dạng: dd/mm/yyyy</div>*@
+            </div>
+            <div class="col-md-3">
+                <label class="form-label form-label-sm mb-1">Từ khóa</label>
+                <input type="text" name="keyword" value="@Model.Keyword" class="form-control form-control-sm" placeholder="Tên SP / mã code / phiếu..." />
+            </div>
+            <div class="col-md-2">
+                <label class="form-label form-label-sm mb-1">Tên máy</label>
+                <input type="text" name="tenMay" value="@Model.TenMay" class="form-control form-control-sm" placeholder="Lọc theo máy..." />
+            </div>
+            <div class="col-md-3 d-flex gap-2">
+                <button type="submit" class="btn btn-primary btn-sm px-3"><i class="bi bi-funnel me-1"></i>Lọc</button>
+                <a href="/LichSu" class="btn btn-outline-secondary btn-sm"><i class="bi bi-x-circle me-1"></i>Xóa lọc</a>
+                <a id="btnXuatExcel" href="#" class="btn btn-success btn-sm">
+                    <i class="bi bi-file-earmark-excel me-1"></i>Xuất File Excel
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+<ul class="nav nav-tabs mb-3">
+    <li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#tabDs">
+        <i class="bi bi-list-ul me-1"></i>Danh sách <span class="badge bg-secondary ms-1">@Model.DsLichSu.Count</span>
+    </a></li>
+    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tabTk">
+        <i class="bi bi-bar-chart me-1"></i>Thống kê theo SP
+    </a></li>
+</ul>
+<div class="tab-content">
+    <div class="tab-pane fade show active" id="tabDs">
+        @if (!Model.DsLichSu.Any()) {
+            <div class="text-center text-muted py-5">
+                <i class="bi bi-inbox display-5 d-block mb-2"></i>Không có dữ liệu trong khoảng thời gian đã chọn.
+            </div>
+        } else {
+            <div style="max-height:75vh; overflow-y:auto; overflow-x:auto">
+                <table class="table table-sm table-hover table-bordered align-middle table-sticky">
+                    <thead class="table-light">
+                        <tr class="text-center">
+                            <th>Tên SP</th><th>Mã code</th><th>Phiếu SP</th><th>Loại giấy</th>                            
+                            <th>SL PSP</th><th>SL SP/Tem</th><th>SL Tem in</th>
+                            <th>Ca SX</th><th>Người kiểm</th><th>Người đóng gói</th><th>Ngày SX</th><th>Thời gian in</th><th>Máy</th><th>Ghi chú</th>
+                            <th style="width:50px">Số lần in lại</th>
+                            <th style="width:80px"> Hành động</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    @foreach (var ls in Model.DsLichSu) {
+                        <tr class="text-center">
+                            <td class="fw-semibold text-truncate" style="max-width:200px; white-space:wrap" title="@ls.TenSanPham">@ls.TenSanPham</td>
+                            
+                            <td style="white-space:wrap;max-width:80px"><code class="text-danger">@ls.MaCode</code></td>
+                            <td class="small text-muted" style="white-space:nowrap">@ls.PhieuSanPham</td>
+                            <td class="small" style="white-space:nowrap" title="@ls.TenLoaiGiay">@ls.TenLoaiGiay</td>
+                            <td class="text-center">@ls.SoLuongPsp</td>
+                            <td class="text-center">@ls.SoLuongSanPham</td>
+                            <td class="text-center">@ls.SoLuongNhan</td>
+                            <td class="small">@ls.TenCa</td>
+                            <td class="small">@ls.NguoiKiem</td>
+                            <td class="small">@ls.NguoiDongGoi</td>
+                            <td class="small">@ls.NgaySanXuat?.ToString("dd/MM/yyyy")</td>
+                            <td class="small text-muted">@ls.ThoiGianTaoTem.ToString("dd/MM HH:mm")</td>
+                            <td class="small text-muted">@ls.TenMayTinh</td>
+                            <td class="small text-muted">@ls.GhiChu</td>
+                            <td class="text-center">
+                                @if (ls.SoLanInLai > 0) { <span class="badge bg-warning text-dark">×@ls.SoLanInLai</span> }
+                            </td>
+                            <td>
+                                <div class="d-flex gap-1">
+                                    <a href="/LichSu/Copy?maLichSu=@ls.MaLichSu" class="btn btn-xs btn-outline-primary" title="Copy"><i class="bi bi-copy"></i></a>
+                                    <a href="/PhienIn/InLai?maLichSu=@ls.MaLichSu" target="_blank" class="btn btn-xs btn-outline-secondary" title="In lại"><i class="bi bi-printer"></i></a>
+                                    <button class="btn btn-xs btn-danger btn-xoa-ls ms-1 "
+                                            data-id="@ls.MaLichSu"
+                                            data-ten="@ls.TenSanPham"                                            
+                                            title="Xóa lịch sử">                                            
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+    <div class="tab-pane fade" id="tabTk">
+        @if (!Model.ThongKe.Any()) {
+            <div class="text-center text-muted py-5"><i class="bi bi-bar-chart display-5 d-block mb-2"></i>Chưa có dữ liệu.</div>
+        } else {
+            <div class="table-responsive">
+                <table class="table table-sm table-hover align-middle">
+                    <thead class="table-light">
+                        <tr><th>Tên sản phẩm</th><th>Mã code</th><th class="text-end">Số lần in</th><th class="text-end">Tổng nhãn</th><th>Lần in cuối</th></tr>
+                    </thead>
+                    <tbody>
+                    @foreach (var tk in Model.ThongKe) {
+                        <tr>
+                            <td class="fw-semibold">@tk.TenSanPham</td>
+                            <td><code class="text-danger">@tk.MaCode</code></td>
+                            <td class="text-end">@tk.SoLanIn</td>
+                            <td class="text-end fw-bold">@tk.TongNhan.ToString("N0")</td>
+                            <td class="small text-muted">@tk.LanInCuoi.ToString("dd/MM/yyyy HH:mm")</td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+    @section Scripts {
+    <script>
+    document.querySelectorAll('.btn-xoa-ls').forEach(btn => {
+        btn.addEventListener('click', async function () {
+            const id  = this.dataset.id;
+            const ten = this.dataset.ten;
+            if (!confirm(`Xóa bản ghi "${ten}"?\nHành động này không thể hoàn tác.`)) return;
+
+            const res = await fetch('/LichSu/Xoa', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ maLichSu: parseInt(id) })
+            });
+            const json = await res.json();
+            if (json.success) {
+                this.closest('tr').remove();
+            } else {
+                alert('Lỗi: ' + json.message);
+            }
+        });
+    });
+    // Cập nhật href nút Xuất Excel theo filter hiện tại
+    (function(){
+        const form = document.querySelector('form[method="get"]');
+        const G = id => document.getElementById(id);
+        const isoToDmy = iso => {
+            if (!iso) return '';
+            const m = String(iso).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+            return m ? `${m[3]}/${m[2]}/${m[1]}` : iso;
+        };
+        const toIso = date =>
+            `${date.getFullYear().toString().padStart(4,'0')}-${(date.getMonth() + 1).toString().padStart(2,'0')}-${date.getDate().toString().padStart(2,'0')}`;
+        const dateFromIso = iso => {
+            const m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+            return m ? new Date(+m[1], +m[2] - 1, +m[3]) : null;
+        };
+        function createDmyDatePicker({ inputId, hiddenId, pickerId, buttonId, onChange }) {
+            const input = G(inputId);
+            const hidden = G(hiddenId);
+            const picker = G(pickerId);
+            const button = G(buttonId);
+            let selectedIso = hidden.value || '';
+            let viewDate = dateFromIso(selectedIso) || new Date();
+            const dow = ['T2','T3','T4','T5','T6','T7','CN'];
+
+            function setValue(iso, notify = true) {
+                selectedIso = iso || '';
+                hidden.value = selectedIso;
+                input.value = selectedIso ? isoToDmy(selectedIso) : '';
+                render();
+                if (notify) {
+                    hidden.dispatchEvent(new Event('input', { bubbles: true }));
+                    onChange?.(selectedIso);
+                }
+            }
+            function close() { picker.classList.add('d-none'); }
+            function open() { render(); picker.classList.remove('d-none'); }
+            function toggle() { picker.classList.contains('d-none') ? open() : close(); }
+            function render() {
+                const y = viewDate.getFullYear();
+                const m = viewDate.getMonth();
+                const first = new Date(y, m, 1);
+                const startOffset = (first.getDay() + 6) % 7;
+                const start = new Date(y, m, 1 - startOffset);
+                const todayIso = toIso(new Date());
+                let html = `
+                    <div class="dmy-datepicker-nav">
+                        <button type="button" class="btn btn-sm btn-outline-secondary" data-act="prev"><i class="bi bi-chevron-left"></i></button>
+                        <div class="dmy-datepicker-title">Tháng ${m + 1}/${y}</div>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" data-act="next"><i class="bi bi-chevron-right"></i></button>
+                    </div>
+                    <div class="dmy-datepicker-head">${dow.map(x => `<div class="dmy-datepicker-dow">${x}</div>`).join('')}</div>
+                    <div class="dmy-datepicker-grid">`;
+                for (let i = 0; i < 42; i++) {
+                    const d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
+                    const iso = toIso(d);
+                    const cls = [
+                        'dmy-datepicker-day',
+                        d.getMonth() !== m ? 'is-muted' : '',
+                        iso === todayIso ? 'is-today' : '',
+                        iso === selectedIso ? 'is-selected' : ''
+                    ].filter(Boolean).join(' ');
+                    html += `<button type="button" class="${cls}" data-date="${iso}">${d.getDate()}</button>`;
+                }
+                picker.innerHTML = html + `</div>
+                    <div class="dmy-datepicker-footer">
+                        <button type="button" class="btn btn-sm btn-outline-secondary" data-act="clear">Xóa</button>
+                        <button type="button" class="btn btn-sm btn-outline-primary" data-act="today">Hôm nay</button>
+                    </div>`;
+            }
+
+            input.addEventListener('click', open);
+            button.addEventListener('click', toggle);
+            picker.addEventListener('click', e => {
+                const act = e.target.closest('[data-act]')?.dataset.act;
+                if (act === 'prev') { viewDate = new Date(viewDate.getFullYear(), viewDate.getMonth() - 1, 1); render(); return; }
+                if (act === 'next') { viewDate = new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 1); render(); return; }
+                if (act === 'today') { const today = toIso(new Date()); viewDate = dateFromIso(today); setValue(today); close(); return; }
+                if (act === 'clear') { setValue(''); close(); return; }
+                const date = e.target.closest('[data-date]')?.dataset.date;
+                if (date) { viewDate = dateFromIso(date); setValue(date); close(); }
+            });
+            document.addEventListener('click', e => {
+                if (!picker.contains(e.target) && !input.contains(e.target) && !button.contains(e.target)) close();
+            });
+            document.addEventListener('keydown', e => {
+                if (e.key === 'Escape') close();
+            });
+            setValue(selectedIso, false);
+        }
+        function updateExcelLink(){
+            const p = new URLSearchParams();
+            const tuNgay  = form.querySelector('[name="tuNgay"]').value;
+            const denNgay = form.querySelector('[name="denNgay"]').value;
+            const keyword = form.querySelector('[name="keyword"]').value;
+            const tenMay  = form.querySelector('[name="tenMay"]').value;
+            if(tuNgay)  p.set('tuNgay',  tuNgay);
+            if(denNgay) p.set('denNgay', denNgay);
+            if(keyword) p.set('keyword', keyword);
+            if(tenMay)  p.set('tenMay',  tenMay);
+            document.getElementById('btnXuatExcel').href = '/LichSu/XuatExcel?' + p.toString();
+        }
+        createDmyDatePicker({ inputId: 'tuNgayPickerInput', hiddenId: 'tuNgayIso', pickerId: 'tuNgayPicker', buttonId: 'btnTuNgay', onChange: updateExcelLink });
+        createDmyDatePicker({ inputId: 'denNgayPickerInput', hiddenId: 'denNgayIso', pickerId: 'denNgayPicker', buttonId: 'btnDenNgay', onChange: updateExcelLink });
+        form.querySelectorAll('input').forEach(i => i.addEventListener('input', updateExcelLink));
+        updateExcelLink();
+    })();
+    </script>
+    }
+</div>

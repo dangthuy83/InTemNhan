@@ -1,0 +1,16 @@
+bin/
+obj/
+build/
+.vs/
+.vscode/
+
+appsettings.json
+appsettings.*.json
+!appsettings.example.json
+
+may_tinh.json
+!may_tinh.example.json
+
+*.user
+*.suo
+*.log

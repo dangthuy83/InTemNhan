@@ -1,0 +1,344 @@
+@model PrintPreviewVM
+@{
+    Layout = null;
+    var cfg    = Model.CauHinh;
+    var layout = cfg.Layout;
+    var pageSize      = Model.MauIn.KhoGiay == "a4" ? "210mm 297mm" : "215.9mm 279.4mm";
+    var pageSizeLabel = Model.MauIn.KhoGiay == "a4" ? "A4" : "Letter";
+    var tenMau        = Model.MauIn.TenMau;
+    var tongNhan      = Model.Labels.Count;
+    var laInLai       = Model.LaInLai;
+    var maPhien       = Model.MaPhien;
+    var maLichSu      = Model.MaLichSu;
+
+    double TopMm(int row) => layout.TinhTopMm(row);
+
+    // Style chung cho mọi field — KHÔNG set max-width ở đây (để JS đo đúng scrollWidth tự nhiên)
+    string FieldStyle(CauHinhTruong f) =>
+        $"position:absolute;left:{f.X}mm;top:{f.Y}mm;" +
+        $"font-family:{f.Font},Arial,sans-serif;font-size:{f.CoChu}pt;color:{f.MauChu};" +
+        $"font-weight:{(f.InDam?"bold":"normal")};font-style:{(f.InNghieng?"italic":"normal")};" +
+        $"text-align:{f.CanChinh};white-space:nowrap;";
+
+    // Tên SP: không set max-width trong CSS, JS sẽ đọc data-max-width-mm để tự fit/wrap
+    string TenSpStyle(CauHinhTruong f) => FieldStyle(f);
+    double TenSpMaxWidthMm(CauHinhTruong f) => layout.RongNhan - f.X;
+
+    // Người đóng gói: tương tự, không set max-width cứng trong CSS
+    string NguoiDongGoiStyle(CauHinhTruong f) => FieldStyle(f);
+    double NguoiDongGoiMaxWidthMm(CauHinhTruong f) =>
+        Math.Max(10, layout.RongNhan - f.X - cfg.NguoiDongGoiTruncateRightMm);
+
+    bool ShowPrefix(CauHinhTruong f) =>
+        f.HienThiNhan && !string.IsNullOrWhiteSpace(f.Nhan);
+
+    string FieldClass(CauHinhTruong f, string extra = "")
+    {
+        var cls = extra;
+        if (ShowPrefix(f)) cls = $"{cls} label-with-prefix".Trim();
+        return cls;
+    }
+
+    string DataX(CauHinhTruong f) =>
+        f.X.ToString("F2", System.Globalization.CultureInfo.InvariantCulture);
+}
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8" /><title>In tem nhãn</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:#e5e5e5;font-family:Arial,sans-serif;}
+.ctrl{background:#2c3e50;color:#fff;padding:10px 16px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:100;flex-wrap:wrap;}
+.ctrl button{padding:6px 16px;border:none;border-radius:4px;cursor:pointer;font-size:14px;}
+.btn-p{background:#27ae60;color:#fff;font-weight:bold;}
+.btn-c{background:#e74c3c;color:#fff;}
+.info{font-size:13px;color:#bdc3c7;}
+.print-error{display:none;flex-basis:100%;background:#fff3cd;color:#664d03;border:1px solid #ffda6a;border-radius:4px;padding:8px 10px;font-size:13px;line-height:1.35;}
+.print-error.show{display:block;}
+.label-with-prefix{display:inline-grid;grid-template-columns:var(--prefix-width-px, auto) auto auto;column-gap:2px;align-items:baseline;}
+.label-with-prefix .field-prefix{white-space:nowrap;}
+.label-with-prefix .field-colon{padding-right:2px;}
+.label-with-prefix .field-value{min-width:0;white-space:nowrap;}
+.pages{display:flex;flex-direction:column;align-items:center;padding:20px;gap:16px;}
+.label-page{background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.2);position:relative;overflow:hidden;
+  width:@(layout.RongTrangMm)mm;height:@(layout.CaoTrangMm)mm;}
+.label-cell{position:absolute;border:none;overflow:hidden;box-sizing:content-box;
+  width:@(layout.RongNhan)mm;height:@(layout.CaoNhan)mm;}
+.no-labels{background:#fff7e6;border:2px dashed #f0a500;border-radius:8px;padding:24px 32px;text-align:center;color:#856404;}
+@@media print{
+  body{background:#fff;}.ctrl{display:none!important;}
+  .pages{padding:0;gap:0;}
+  .label-page{box-shadow:none;overflow:hidden;}
+  .label-page:not(:last-child){page-break-after:always;}
+  .label-cell{border-color:transparent;}
+  @@page{size:@pageSize;margin:0;}
+}
+</style>
+</head>
+<body>
+<div class="ctrl">
+  <button class="btn-p" id="btnPrint" onclick="doPrint()">🖨️ In ngay</button>
+  @if (!laInLai)
+  {
+    <button class="btn-c" onclick="location.href='/PhienIn/Tiep?maPhien=@(maPhien ?? 0)'">↩ Quay lại</button>
+  }
+  <span class="info">
+    Mẫu: <strong>@tenMau</strong> &nbsp;|&nbsp;
+    Khổ: <strong>@pageSizeLabel</strong> &nbsp;|&nbsp;
+    Tổng nhãn: <strong>@tongNhan</strong>
+  </span>
+  <div class="print-error" id="printError"></div>
+</div>
+<div class="pages">
+@{
+  int perPage = Math.Max(1, Model.MauIn.SoNhanMoiTrang);
+  int total   = Model.Labels.Count;
+
+  if (total == 0)
+  {
+    <div class="no-labels" style="margin:40px auto;max-width:400px;">
+      <div style="font-size:2rem;margin-bottom:8px;">⚠️</div>
+      <strong>Không có dữ liệu nhãn để in.</strong><br/>
+      <small style="color:#6c757d;">Vui lòng kiểm tra lại dữ liệu hoặc template mặc định.</small>
+    </div>
+  }
+  else
+  {
+    int pages = (int)Math.Ceiling((double)total / perPage);
+    for (int pg = 0; pg < pages; pg++)
+    {
+      var pageLabels = Model.Labels.Skip(pg * perPage).Take(perPage).ToList();
+      <div class="label-page">
+      @for (int i = 0; i < pageLabels.Count; i++)
+      {
+        var lb   = pageLabels[i];
+        var col  = i % layout.SoCot;
+        var row  = i / layout.SoCot;
+        var left = layout.LeTrai + col * (layout.RongNhan + layout.KhoangCachNgang);
+        var top  = TopMm(row);
+        <div class="label-cell" style="left:@(left)mm;top:@(top)mm;">
+          @if(cfg.TenSanPham.HienThi){
+            <span class="@FieldClass(cfg.TenSanPham, "fit-ten-sp")" data-label-x-mm="@DataX(cfg.TenSanPham)" data-base-pt="@cfg.TenSanPham.CoChu" data-y-mm="@cfg.TenSanPham.Y"
+                  data-max-width-mm="@TenSpMaxWidthMm(cfg.TenSanPham).ToString("F2")"
+                  style="@TenSpStyle(cfg.TenSanPham)">
+              @if (ShowPrefix(cfg.TenSanPham)) { <span class="field-prefix">@cfg.TenSanPham.Nhan</span><span class="field-colon">:</span><span class="field-value">@lb.TenSanPham</span> }
+              else { @lb.TenSanPham }
+            </span>
+          }
+          @if(cfg.MaCode.HienThi){<span class="@FieldClass(cfg.MaCode)" data-label-x-mm="@DataX(cfg.MaCode)" style="@FieldStyle(cfg.MaCode)">@if (ShowPrefix(cfg.MaCode)) { <span class="field-prefix">@cfg.MaCode.Nhan</span><span class="field-colon">:</span><span class="field-value">@lb.MaCode</span> } else { @lb.MaCode }</span>}
+          @if(cfg.PhieuSanPham.HienThi){<span class="@FieldClass(cfg.PhieuSanPham)" data-label-x-mm="@DataX(cfg.PhieuSanPham)" style="@FieldStyle(cfg.PhieuSanPham)">@if (ShowPrefix(cfg.PhieuSanPham)) { <span class="field-prefix">@cfg.PhieuSanPham.Nhan</span><span class="field-colon">:</span><span class="field-value">@lb.PhieuSanPham</span> } else { @lb.PhieuSanPham }</span>}
+          @if(cfg.TenLoaiGiay.HienThi){<span class="@FieldClass(cfg.TenLoaiGiay)" data-label-x-mm="@DataX(cfg.TenLoaiGiay)" style="@FieldStyle(cfg.TenLoaiGiay)">@if (ShowPrefix(cfg.TenLoaiGiay)) { <span class="field-prefix">@cfg.TenLoaiGiay.Nhan</span><span class="field-colon">:</span><span class="field-value">@lb.TenLoaiGiay</span> } else { @lb.TenLoaiGiay }</span>}
+          @if(cfg.SoLuong.HienThi){<span class="@FieldClass(cfg.SoLuong)" data-label-x-mm="@DataX(cfg.SoLuong)" style="@FieldStyle(cfg.SoLuong)">@if (ShowPrefix(cfg.SoLuong)) { <span class="field-prefix">@cfg.SoLuong.Nhan</span><span class="field-colon">:</span><span class="field-value">@lb.SoLuong</span> } else { @lb.SoLuong }</span>}
+          @if(cfg.TenCa.HienThi && !string.IsNullOrEmpty(lb.TenCa)){<span class="@FieldClass(cfg.TenCa)" data-label-x-mm="@DataX(cfg.TenCa)" style="@FieldStyle(cfg.TenCa)">@if (ShowPrefix(cfg.TenCa)) { <span class="field-prefix">@cfg.TenCa.Nhan</span><span class="field-colon">:</span><span class="field-value">@lb.TenCa</span> } else { @lb.TenCa }</span>}
+          @if(cfg.NgaySanXuat.HienThi && !string.IsNullOrEmpty(lb.NgaySanXuat)){<span class="@FieldClass(cfg.NgaySanXuat)" data-label-x-mm="@DataX(cfg.NgaySanXuat)" style="@FieldStyle(cfg.NgaySanXuat)">@if (ShowPrefix(cfg.NgaySanXuat)) { <span class="field-prefix">@cfg.NgaySanXuat.Nhan</span><span class="field-colon">:</span><span class="field-value">@lb.NgaySanXuat</span> } else { @lb.NgaySanXuat }</span>}
+          @if(cfg.NguoiKiem.HienThi && !string.IsNullOrEmpty(lb.NguoiKiem)){<span class="@FieldClass(cfg.NguoiKiem)" data-label-x-mm="@DataX(cfg.NguoiKiem)" style="@FieldStyle(cfg.NguoiKiem)">@if (ShowPrefix(cfg.NguoiKiem)) { <span class="field-prefix">@cfg.NguoiKiem.Nhan</span><span class="field-colon">:</span><span class="field-value">@lb.NguoiKiem</span> } else { @lb.NguoiKiem }</span>}
+          @if(cfg.NguoiDongGoi.HienThi && !string.IsNullOrEmpty(lb.NguoiDongGoi)){
+            <span class="@FieldClass(cfg.NguoiDongGoi, "fit-nguoi-dong-goi")" data-label-x-mm="@DataX(cfg.NguoiDongGoi)" data-base-pt="@cfg.NguoiDongGoi.CoChu" data-y-mm="@cfg.NguoiDongGoi.Y"
+                  data-max-width-mm="@NguoiDongGoiMaxWidthMm(cfg.NguoiDongGoi).ToString("F2")"
+                  style="@NguoiDongGoiStyle(cfg.NguoiDongGoi)">
+              @if (ShowPrefix(cfg.NguoiDongGoi)) { <span class="field-prefix">@cfg.NguoiDongGoi.Nhan</span><span class="field-colon">:</span><span class="field-value">@lb.NguoiDongGoi</span> }
+              else { @lb.NguoiDongGoi }
+            </span>
+          }
+          @if(cfg.Stt.HienThi && !string.IsNullOrEmpty(lb.Stt)){<span style="@FieldStyle(cfg.Stt)">@lb.Stt</span>}
+        </div>
+      }
+      </div>
+    }
+  }
+}
+</div>
+<script>
+// ── Fit + wrap text với neo đáy cố định ──────────────────
+// Logic: co font từ basePt xuống tới WRAP_AT_PT (10pt) dựa trên độ rộng
+// CỐ ĐỊNH lấy từ data-max-width-mm (Razor) — không đo offsetWidth của
+// chính span, vì span không có giới hạn width nào để đo cho đúng.
+// Nếu ở WRAP_AT_PT vẫn tràn thì cho phép wrap 2 dòng, đồng thời dịch
+// khối lên thêm WRAP_SHIFT_MM để dòng 2 không đè field bên dưới.
+//
+// ĐIỀU CHỈNH TẠI ĐÂY nếu dòng 2 vẫn bị dính field dưới:
+// tăng WRAP_SHIFT_MM lên (vd: 1.5, 2...) — đơn vị mm.
+const WRAP_SHIFT_MM = -1.5;     // ← CHỈNH SỐ NÀY nếu vẫn bị dính
+const WRAP_AT_PT    = 9;    // ngưỡng pt bắt đầu cho phép wrap
+const MIN_PT        = 6;     // pt nhỏ nhất khi không wrap
+const PX_PER_MM      = 96 / 25.4;
+const PT_TO_MM        = 0.3528;
+const LINE_HEIGHT_FACTOR = 1.2;
+const TOLERANCE_PX = 5; // MỚI — tăng dung sai lên 5px (~1.3mm) để tránh false-positive do sai số mm/px
+
+function fitWithBottomAnchor(el, basePt, yMm, maxWidthMm) {
+    el.style.top          = yMm + 'mm';
+    el.style.fontSize     = basePt + 'pt';
+    el.style.whiteSpace    = 'nowrap';
+    el.style.overflow      = 'visible';
+    el.style.textOverflow  = '';
+    el.style.width         = '';   // bỏ width cũ (nếu có từ lần fit trước) để đo lại tự nhiên
+
+    const fixedWidth = maxWidthMm * PX_PER_MM;  // độ rộng khung CỐ ĐỊNH tính từ mm Razor
+
+    let fs = basePt;
+    // Bước 1: co font xuống tới WRAP_AT_PT
+    while (el.scrollWidth > fixedWidth + TOLERANCE_PX && fs > WRAP_AT_PT) {
+        fs -= 0.5;
+        el.style.fontSize = fs + 'pt';
+    }
+
+    let isWrapped = false;
+    if (el.scrollWidth > fixedWidth + TOLERANCE_PX) {
+        // Vẫn tràn ở WRAP_AT_PT → cho phép wrap 2 dòng, dừng co font tại đây
+        isWrapped = true;
+        el.style.whiteSpace = 'normal';
+        el.style.width      = fixedWidth + 'px';
+    }
+
+    const origHeightMm = basePt * PT_TO_MM * LINE_HEIGHT_FACTOR;
+    const newHeightMm  = fs    * PT_TO_MM * LINE_HEIGHT_FACTOR;
+    const deltaMm      = origHeightMm - newHeightMm;
+
+    if (isWrapped) {
+        // Đo chiều cao 1 dòng thực tế (px) bằng cách tạm tắt wrap để đo
+        el.style.whiteSpace = 'nowrap';
+        const singleLineHeightPx = el.offsetHeight;
+        el.style.whiteSpace = 'normal';
+
+        const singleLineHeightMm = singleLineHeightPx / PX_PER_MM;
+
+        // Đáy dòng 1 = vị trí gốc (đã bù co font) trừ thêm WRAP_SHIFT_MM
+        const bottomDong1Mm = yMm + deltaMm - WRAP_SHIFT_MM;
+        const topKhoiMm     = bottomDong1Mm - singleLineHeightMm; // top của khối 2 dòng
+        el.style.top = topKhoiMm + 'mm';
+    } else {
+        // Không wrap — co tiếp xuống MIN_PT nếu vẫn tràn ở WRAP_AT_PT
+        while (el.scrollWidth > fixedWidth + TOLERANCE_PX && fs > MIN_PT) {
+            fs -= 0.5;
+            el.style.fontSize = fs + 'pt';
+        }
+        const origH = basePt * PT_TO_MM * LINE_HEIGHT_FACTOR;
+        const newH  = fs    * PT_TO_MM * LINE_HEIGHT_FACTOR;
+        const d     = origH - newH;
+        el.style.top = (yMm + d) + 'mm';
+    }
+
+    el.style.width        = fixedWidth + 'px';
+    el.style.overflow      = 'hidden';
+    el.style.textOverflow  = isWrapped ? '' : (el.scrollWidth > fixedWidth + TOLERANCE_PX ? 'ellipsis' : '');
+}
+
+function fitAllTenSanPham() {
+    document.querySelectorAll('.fit-ten-sp').forEach(el => {
+        const basePt     = parseFloat(el.dataset.basePt) || 10;
+        const yMm        = parseFloat(el.dataset.yMm) || 0;
+        const maxWidthMm = parseFloat(el.dataset.maxWidthMm) || 50;
+        fitWithBottomAnchor(el, basePt, yMm, maxWidthMm);
+    });
+}
+
+function fitAllNguoiDongGoi() {
+    document.querySelectorAll('.fit-nguoi-dong-goi').forEach(el => {
+        const basePt     = parseFloat(el.dataset.basePt) || 10;
+        const yMm        = parseFloat(el.dataset.yMm) || 0;
+        const maxWidthMm = parseFloat(el.dataset.maxWidthMm) || 26;
+        fitWithBottomAnchor(el, basePt, yMm, maxWidthMm);
+    });
+}
+
+function alignLabelPrefixes(root = document) {
+    const items = [...root.querySelectorAll('.label-with-prefix')];
+    const groups = [];
+    const toleranceMm = 3;
+
+    items.forEach(el => {
+        const x = parseFloat(el.dataset.labelXMm);
+        if (isNaN(x)) return;
+
+        let group = groups.find(g => Math.abs(g.x - x) <= toleranceMm);
+        if (!group) {
+            group = { x, items: [] };
+            groups.push(group);
+        }
+        group.items.push(el);
+    });
+
+    groups.forEach(group => {
+        let maxWidth = 0;
+        group.items.forEach(el => {
+            const prefix = el.querySelector('.field-prefix');
+            if (prefix) maxWidth = Math.max(maxWidth, prefix.getBoundingClientRect().width);
+        });
+
+        group.items.forEach(el => {
+            el.style.setProperty('--prefix-width-px', `${Math.ceil(maxWidth)}px`);
+        });
+    });
+}
+
+function showPrintError(message) {
+    const box = document.getElementById('printError');
+    if (!box) {
+        alert(message);
+        return;
+    }
+    box.textContent = message || 'Không chốt được phiên in.';
+    box.classList.add('show');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function clearPrintError() {
+    const box = document.getElementById('printError');
+    if (!box) return;
+    box.textContent = '';
+    box.classList.remove('show');
+}
+
+async function doPrint() {
+    const btn = document.getElementById('btnPrint');
+    if (btn) btn.disabled = true;
+    clearPrintError();
+
+    alignLabelPrefixes();
+    fitAllTenSanPham();
+    fitAllNguoiDongGoi();
+
+    try {
+        if (@(laInLai ? "true" : "false")) {
+            const res = await fetch('/PhienIn/XacNhanInLai', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ maLichSu: @((maLichSu ?? 0)) })
+            }).then(r => r.json());
+
+            if (!res.success) throw new Error(res.message || 'Không ghi nhận được lần in lại.');
+        } else {
+            const res = await fetch('/PhienIn/XacNhan', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ maPhien: @((maPhien ?? 0)) })
+            }).then(r => r.json());
+
+            if (!res.success) throw new Error(res.message || 'Không chốt được phiên in.');
+        }
+
+        requestAnimationFrame(() => {
+            window.onafterprint = () => {
+                window.close();
+                if (!@(laInLai ? "true" : "false")) {
+                    setTimeout(() => { location.href = '/PhienIn'; }, 250);
+                }
+            };
+            window.print();
+        });
+    } catch (err) {
+        showPrintError(err.message || err);
+        if (btn) btn.disabled = false;
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    alignLabelPrefixes();
+    fitAllTenSanPham();
+    fitAllNguoiDongGoi();
+});
+</script>
+</body>
+</html>

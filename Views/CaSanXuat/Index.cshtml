@@ -1,0 +1,60 @@
+@model List<CaSanXuat>
+@{ ViewData["Title"] = "Ca sản xuất"; }
+<div class="d-flex align-items-center mb-3">
+    <h5 class="mb-0 fw-bold"><i class="bi bi-people me-2 text-primary"></i>Quản lý ca sản xuất</h5>
+</div>
+<div class="row">
+    <div class="col-md-5 col-lg-4">
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-header bg-white py-2 fw-semibold small"><i class="bi bi-plus-circle me-1 text-primary"></i>Thêm ca mới</div>
+            <div class="card-body">
+                <div class="input-group input-group-sm">
+                    <input type="text" id="tenCaMoi" class="form-control" placeholder="Tên ca — VD: Ca 4" />
+                    <button class="btn btn-primary" id="btnThem">Thêm</button>
+                </div>
+                <div id="msg" class="mt-2"></div>
+            </div>
+        </div>
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white py-2 fw-semibold small"><i class="bi bi-list-ul me-1 text-primary"></i>Danh sách ca</div>
+            <ul class="list-group list-group-flush" id="listCa">
+                @foreach (var ca in Model) {
+                <li class="list-group-item d-flex align-items-center gap-2 py-2">
+                    <span class="flex-grow-1">@ca.TenCa</span>
+                    <span class="badge @(ca.TrangThai == 1 ? "bg-success" : "bg-secondary")">
+                        @(ca.TrangThai == 1 ? "Đang dùng" : "Ẩn")
+                    </span>
+                    <button class="btn btn-xs @(ca.TrangThai == 1 ? "btn-outline-warning" : "btn-outline-success") btn-toggle"
+                            data-id="@ca.MaCa" data-an="@(ca.TrangThai == 1 ? "true" : "false")">
+                        <i class="bi @(ca.TrangThai == 1 ? "bi-eye-slash" : "bi-eye")"></i>
+                    </button>
+                </li>
+                }
+            </ul>
+        </div>
+    </div>
+    <div class="col-md-7 col-lg-8">
+        <div class="alert alert-info border-0">
+            <i class="bi bi-info-circle me-2"></i>
+            Ca sản xuất là tuỳ chọn khi nhập tem. Nên ẩn ca thay vì xóa để giữ dữ liệu lịch sử.
+        </div>
+    </div>
+</div>
+@section Scripts {
+<script>
+const POST=async(u,d)=>fetch(u,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)}).then(r=>r.json());
+document.getElementById('btnThem').addEventListener('click',async()=>{
+    const tenCa=document.getElementById('tenCaMoi').value.trim();
+    const res=await POST('/CaSanXuat/Them',{tenCa});
+    const el=document.getElementById('msg');
+    if(res.success){el.innerHTML=`<div class="alert alert-success py-1 small">${res.message}</div>`;setTimeout(()=>location.reload(),800);}
+    else el.innerHTML=`<div class="alert alert-danger py-1 small">${res.message}</div>`;
+});
+document.getElementById('listCa').addEventListener('click',async e=>{
+    const b=e.target.closest('.btn-toggle');
+    if(!b)return;
+    const res=await POST('/CaSanXuat/AnHien',{maCa:+b.dataset.id,an:b.dataset.an==='true'});
+    if(res.success)location.reload();
+});
+</script>
+}

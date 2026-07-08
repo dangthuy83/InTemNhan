@@ -1,0 +1,866 @@
+@model MauInEditorVM
+@{
+    ViewData["Title"] = "Cấu hình mẫu in";
+    var cfg     = Model.CauHinh;
+    var layout  = cfg.Layout;
+    int numGaps = Math.Max(0, layout.SoHang - 1);
+}
+@section Styles {
+<style>
+/* ── Grid 2 cột: trái 1 hàng | phải 3 hàng ── */
+.editor-grid {
+    display: grid;
+    grid-template-columns: 260px 1fr;
+    grid-template-rows: auto auto auto;
+    gap: 12px;
+    align-items: start;
+}
+/* Cột trái: chỉ chiếm hàng 1 (danh sách mẫu + thông tin mẫu) */
+.editor-config {
+    grid-column: 1;
+    grid-row: 1;
+}
+/* Cột phải hàng 1: canvas + field list */
+.editor-top-right {
+    grid-column: 2;
+    grid-row: 1;
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+}
+/* Cột phải hàng 2: property panel sát dưới canvas */
+.editor-prop-right {
+    grid-column: 2;
+    grid-row: 2;
+}
+/* Hàng 3 full width: layout tờ giấy + gap config */
+.editor-layout-row {
+    grid-column: 1 / -1;
+    grid-row: 3;
+}
+
+/* ── Canvas ─────────────────────────────────────── */
+#canvasWrap {
+    background: #d0d0d0;
+    padding: 12px 360px 12px 360px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 0 0 6px 6px;
+}
+#labelCanvas {
+    background: #fff;
+    box-shadow: 0 2px 10px rgba(0,0,0,.25);
+    position: relative;
+    overflow: hidden;
+}
+
+/* ── Tokens ─────────────────────────────────────── */
+.field-token {
+    position: absolute; cursor: grab; user-select: none;
+    white-space: nowrap; line-height: 1.2;
+    border: 1px dashed transparent; padding: 1px 2px; border-radius: 2px;
+    transition: border-color .1s;
+}
+.field-token:hover  { border-color: #0d6efd88; }
+.field-token.active { border-color: #0d6efd; background: rgba(13,110,253,.07); }
+.field-token.dragging { opacity: .55; cursor: grabbing; }
+.field-token.fhidden  { opacity: .18; }
+.label-with-prefix {
+    display: inline-grid;
+    grid-template-columns: var(--prefix-width-px, auto) auto auto;
+    column-gap: 2px;
+    align-items: baseline;
+}
+.label-with-prefix .field-prefix { white-space: nowrap; }
+.label-with-prefix .field-colon { padding-right: 2px; }
+.label-with-prefix .field-value { min-width: 0; white-space: nowrap; }
+
+/* ── Field rows ─────────────────────────────────── */
+.field-row {
+    display: flex; align-items: center; gap: 6px;
+    padding: 5px 8px; border-radius: 6px; cursor: pointer;
+    border: 1px solid transparent; transition: background .1s;
+}
+.field-row:hover  { background: #f0f4ff; }
+.field-row.active { background: #e7efff; border-color: #0d6efd55; }
+.dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+
+/* ── Mẫu list ───────────────────────────────────── */
+.mau-item {
+    padding: 6px 10px; border-radius: 6px; cursor: pointer;
+    border: 1px solid #dee2e6; margin-bottom: 5px; transition: background .1s;
+}
+.mau-item:hover  { background: #f8f9fa; }
+.mau-item.active { background: #e7efff; border-color: #0d6efd; }
+
+/* ── Property panel ─────────────────────────────── */
+#propPanel { opacity: .45; pointer-events: none; transition: opacity .2s; }
+#propPanel.active { opacity: 1; pointer-events: all; }
+
+/* ── Truncate extra field (ẩn mặc định) ────────── */
+/*#pTruncateWrap { display: none; }
+#pTruncateWrap.show { display: flex; }*/
+#pTruncateWrap { display: none !important; }
+#pTruncateWrap.show { display: block !important; }
+</style>
+}
+
+<div class="d-flex align-items-center mb-2 gap-2">
+    <h5 class="mb-0 fw-bold">
+        <i class="bi bi-layout-text-window me-2 text-info"></i>Cấu hình mẫu in
+    </h5>
+    <button class="btn btn-success btn-sm ms-auto" id="btnLuu">
+        <i class="bi bi-save me-1"></i>Lưu mẫu
+    </button>
+    <a href="/MauIn/Editor?taoMoi=true&saoChepTu=@Model.MauIn.MaMauIn" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-plus me-1"></i>Tạo mới
+    </a>
+</div>
+
+@if (Model.IsNew) {
+    <div class="alert alert-info py-2 small mb-2">
+        <i class="bi bi-files me-1"></i>Đang tạo template mới từ cấu hình mẫu đang chọn. Nhập tên mẫu rồi bấm <strong>Lưu mẫu</strong>.
+    </div>
+}
+
+<div class="editor-grid">
+
+    <!-- ════ CỘT TRÁI: Danh sách mẫu + Thông tin mẫu ════ -->
+    <div class="editor-config">
+
+        <!-- Danh sách mẫu -->
+        <div class="card border-0 shadow-sm mb-2">
+            <div class="card-header bg-white py-2 fw-semibold small">
+                <i class="bi bi-collection me-1 text-primary"></i>Danh sách mẫu
+            </div>
+            <div class="card-body p-2">
+                @foreach (var m in Model.DsMauIn) {
+                <div class="mau-item @(m.MaMauIn == Model.MauIn.MaMauIn ? "active" : "")"
+                     onclick="location.href='/MauIn/Editor?maMauIn=@m.MaMauIn'">
+                    <div class="d-flex align-items-center gap-1">
+                        <span class="flex-grow-1 small fw-semibold text-truncate">@m.TenMau</span>
+                        @if (m.LaMacDinh) { <span class="badge bg-success" style="font-size:9px">MĐ</span> }
+                    </div>
+                    <div class="text-muted" style="font-size:10px">
+                        @m.KhoGiay.ToUpper() · @m.SoNhanMoiTrang nhãn/tờ
+                    </div>
+                </div>
+                }
+            </div>
+        </div>
+
+        <!-- Thông tin mẫu -->
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white py-2 fw-semibold small">
+                <i class="bi bi-info-circle me-1 text-primary"></i>Thông tin mẫu
+            </div>
+            <div class="card-body py-2">
+                <input type="hidden" id="maMauIn" value="@Model.MauIn.MaMauIn" />
+                <div class="mb-2">
+                    <label class="form-label form-label-sm">Tên mẫu</label>
+                    <input type="text" id="tenMau" class="form-control form-control-sm"
+                           value="@Model.MauIn.TenMau" />
+                </div>
+                <div class="row g-2 mb-2">
+                    <div class="col-6">
+                        <label class="form-label form-label-sm">Khổ giấy</label>
+                        <select id="khoGiay" class="form-select form-select-sm">
+                            @if (Model.MauIn.KhoGiay == "letter") {
+                                <option value="letter" selected>Letter</option>
+                                <option value="a4">A4</option>
+                            } else {
+                                <option value="letter">Letter</option>
+                                <option value="a4" selected>A4</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label form-label-sm">Nhãn/tờ</label>
+                        <input type="number" id="soNhanMoiTrang" class="form-control form-control-sm"
+                               value="@Model.MauIn.SoNhanMoiTrang" min="1" max="99" />
+                    </div>
+                </div>
+                <div class="form-check form-switch">
+                    @if (Model.MauIn.LaMacDinh) {
+                        <input class="form-check-input" type="checkbox" id="laMacDinh" checked />
+                    } else {
+                        <input class="form-check-input" type="checkbox" id="laMacDinh" />
+                    }
+                    <label class="form-check-label form-label-sm" for="laMacDinh">Mặc định</label>
+                </div>
+            </div>
+        </div>
+
+    </div><!-- /editor-config -->
+
+    <!-- ════ CỘT PHẢI TRÊN: Canvas + Field list ════ -->
+    <div class="editor-top-right">
+
+        <!-- Canvas preview -->
+        <div style="flex-shrink:0;">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white py-2 d-flex align-items-center gap-2">
+                    <span class="fw-semibold small">
+                        <i class="bi bi-eye me-1 text-primary"></i>Preview nhãn
+                    </span>
+                    <span class="badge bg-light text-dark border ms-auto small" id="canvasInfo"></span>
+                </div>
+                <div id="canvasWrap">
+                    <div id="labelCanvas"></div>
+                </div>
+                <div class="px-3 py-1 border-top bg-light" style="font-size:10px;color:#6c757d;">
+                    <i class="bi bi-hand-index me-1"></i>Kéo thả trường để thay đổi vị trí
+                </div>
+            </div>
+        </div>
+
+        <!-- Danh sách trường -->
+        <div style="flex:1;min-width:140px;">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white py-2 fw-semibold small">
+                    <i class="bi bi-list-check me-1 text-primary"></i>Các trường trên tem
+                    <div class="text-muted fw-normal" style="font-size:10px;">
+                        Click để chọn &amp; cấu hình
+                    </div>
+                </div>
+                <div class="card-body p-2" id="fieldList"></div>
+            </div>
+        </div>
+
+    </div><!-- /editor-top-right -->
+
+    <!-- ════ CỘT PHẢI GIỮA: Property panel sát dưới canvas ════ -->
+    <div class="editor-prop-right">
+        <div class="card border-0 shadow-sm" id="propPanel">
+            <div class="card-header bg-primary text-white py-2 small fw-semibold">
+                <span id="propTitle">
+                    <i class="bi bi-cursor me-1"></i>Chọn một trường ở trên để cấu hình
+                </span>
+            </div>
+            <div class="card-body py-2">
+                <div class="row g-2 align-items-end">
+                    <div class="col-auto">
+                        <label class="form-label form-label-sm">X (mm)</label>
+                        <input type="number" id="pX" class="form-control form-control-sm"
+                               style="width:80px" step="0.5" onchange="applyP()" />
+                    </div>
+                    <div class="col-auto">
+                        <label class="form-label form-label-sm">Y (mm)</label>
+                        <input type="number" id="pY" class="form-control form-control-sm"
+                               style="width:80px" step="0.5" onchange="applyP()" />
+                    </div>
+                    <div class="col-auto">
+                        <label class="form-label form-label-sm">Cỡ chữ (pt)</label>
+                        <input type="number" id="pCoChu" class="form-control form-control-sm"
+                               style="width:75px" min="6" max="72" onchange="applyP()" />
+                    </div>
+                    <div class="col-auto">
+                        <label class="form-label form-label-sm">Màu chữ</label>
+                        <input type="color" id="pMauChu"
+                               class="form-control form-control-sm form-control-color"
+                               style="width:46px;height:31px" oninput="applyP()" />
+                    </div>
+                    <div class="col-auto">
+                        <label class="form-label form-label-sm">Font</label>
+                        <select id="pFont" class="form-select form-select-sm" style="width:130px"
+                                onchange="applyP()">
+                            <option>Arial</option><option>Times New Roman</option>
+                            <option>Courier New</option><option>Calibri</option>
+                            <option>Tahoma</option><option>Verdana</option>
+                        </select>
+                    </div>
+                    <div class="col-auto">
+                        <label class="form-label form-label-sm d-block">Style</label>
+                        <div class="d-flex gap-2">
+                            <div class="form-check mb-0">
+                                <input class="form-check-input" type="checkbox" id="pInDam" onchange="applyP()" />
+                                <label class="form-check-label form-label-sm" for="pInDam"><strong>B</strong></label>
+                            </div>
+                            <div class="form-check mb-0">
+                                <input class="form-check-input" type="checkbox" id="pInNghieng" onchange="applyP()" />
+                                <label class="form-check-label form-label-sm" for="pInNghieng"><em>I</em></label>
+                            </div>
+                            <div class="form-check mb-0">
+                                <input class="form-check-input" type="checkbox" id="pHienThi" onchange="applyP()" />
+                                <label class="form-check-label form-label-sm" for="pHienThi">Hiện</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <label class="form-label form-label-sm">Căn chỉnh</label>
+                        <div class="btn-group btn-group-sm" id="btnCC">
+                            <button type="button" class="btn btn-outline-secondary" data-v="left"
+                                    onclick="setCC('left')"><i class="bi bi-text-left"></i></button>
+                            <button type="button" class="btn btn-outline-secondary" data-v="center"
+                                    onclick="setCC('center')"><i class="bi bi-text-center"></i></button>
+                            <button type="button" class="btn btn-outline-secondary" data-v="right"
+                                    onclick="setCC('right')"><i class="bi bi-text-right"></i></button>
+                        </div>
+                    </div>
+                    <!-- Truncate right mm — chỉ hiện khi chọn field nguoi_dong_goi -->
+                    <div class="col-auto" id="pTruncateWrap" hidden>
+                        <div>
+                            <label class="form-label form-label-sm">
+                                Chừa phải (mm)
+                                <i class="bi bi-info-circle text-muted ms-1"
+                                   title="Khoảng trống bên phải tính từ mép phải nhãn. Dùng để tránh đè lên STT."
+                                   data-bs-toggle="tooltip"></i>
+                            </label>
+                            <input type="number" id="pTruncateRight" class="form-control form-control-sm"
+                                   style="width:80px" step="0.5" min="0" onchange="applyP()" />
+                        </div>
+                    </div>
+                    <div class="col">
+                        <div class="d-flex align-items-center gap-3 mb-1">
+                            <div class="form-check mb-0">
+                                <input class="form-check-input" type="checkbox" id="pHienThiNhan"
+                                       onchange="applyP()" />
+                                <label class="form-check-label form-label-sm" for="pHienThiNhan">
+                                    Hiện tên trường <span class="text-muted">(VD: "Số lượng: 480")</span>
+                                </label>
+                            </div>
+                        </div>
+                        <input type="text" id="pNhan" class="form-control form-control-sm"
+                               placeholder="Tên trường in ra (VD: Số lượng)"
+                               onchange="applyP()" />
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div><!-- /editor-prop-right -->
+
+    <!-- ════ HÀNG DƯỚI FULL WIDTH: Layout tờ giấy + Bù sai số ════ -->
+    <div class="editor-layout-row">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white py-2 fw-semibold small d-flex align-items-center">
+                <i class="bi bi-grid me-1 text-primary"></i>Layout tờ giấy &amp; bù sai số
+                <button class="btn btn-link btn-sm ms-auto p-0"
+                        data-bs-toggle="collapse" data-bs-target="#colLayout">
+                    <i class="bi bi-chevron-down"></i>
+                </button>
+            </div>
+            <div class="collapse show" id="colLayout">
+                <div class="card-body py-2">
+                    <div class="row g-2">
+                        <!-- Cột trái: layout cơ bản -->
+                        <div class="col-12 col-md-8">
+                            <div class="row g-2">
+                                <div class="col-6 col-md-2">
+                                    <label class="form-label form-label-sm">Hàng</label>
+                                    <input type="number" id="soHang" class="form-control form-control-sm"
+                                           value="@layout.SoHang" min="1" onchange="onSoHangChange()" />
+                                </div>
+                                <div class="col-6 col-md-2">
+                                    <label class="form-label form-label-sm">Cột</label>
+                                    <input type="number" id="soCot" class="form-control form-control-sm"
+                                           value="@layout.SoCot" min="1" onchange="redraw()" />
+                                </div>
+                                <div class="col-6 col-md-2">
+                                    <label class="form-label form-label-sm">Rộng nhãn (mm)</label>
+                                    <input type="number" id="rongNhan" class="form-control form-control-sm"
+                                           value="@layout.RongNhan" step="0.1" onchange="redraw()" />
+                                </div>
+                                <div class="col-6 col-md-2">
+                                    <label class="form-label form-label-sm">Cao nhãn (mm)</label>
+                                    <input type="number" id="caoNhan" class="form-control form-control-sm"
+                                           value="@layout.CaoNhan" step="0.1" onchange="redraw()" />
+                                </div>
+                                <div class="col-6 col-md-2">
+                                    <label class="form-label form-label-sm">
+                                        Bước hàng (mm)
+                                        <i class="bi bi-info-circle text-muted ms-1"
+                                           title="Khoảng cách từ top ô tem hàng N đến top ô tem hàng N+1. Để trống = tính tự động."
+                                           data-bs-toggle="tooltip"></i>
+                                    </label>
+                                    <input type="number" id="buocHang" class="form-control form-control-sm"
+                                           value="@(layout.BuocHang.HasValue && layout.BuocHang.Value > 0 ? layout.BuocHang.Value.ToString("F1") : "")"
+                                           step="0.1" placeholder="= Cao + Gap" />
+                                </div>
+                                <div class="col-6 col-md-2">
+                                    <label class="form-label form-label-sm">Lề trên (mm)</label>
+                                    <input type="number" id="leTren" class="form-control form-control-sm"
+                                           value="@layout.LeTren" step="0.1" />
+                                </div>
+                                <div class="col-6 col-md-2">
+                                    <label class="form-label form-label-sm">Lề dưới (mm)</label>
+                                    <input type="number" id="leDuoi" class="form-control form-control-sm"
+                                           value="@layout.LeDuoi" step="0.1" />
+                                </div>
+                                <div class="col-6 col-md-2">
+                                    <label class="form-label form-label-sm">Lề trái (mm)</label>
+                                    <input type="number" id="leTrai" class="form-control form-control-sm"
+                                           value="@layout.LeTrai" step="0.1" />
+                                </div>
+                                <div class="col-6 col-md-2">
+                                    <label class="form-label form-label-sm">Lề phải (mm)</label>
+                                    <input type="number" id="lePhai" class="form-control form-control-sm"
+                                           value="@layout.LePhai" step="0.1" />
+                                </div>
+                                <div class="col-6 col-md-2">
+                                    <label class="form-label form-label-sm">Gap ngang (mm)</label>
+                                    <input type="number" id="gapNgang" class="form-control form-control-sm"
+                                           value="@layout.KhoangCachNgang" step="0.1" />
+                                </div>
+                                <div class="col-6 col-md-2">
+                                    <label class="form-label form-label-sm">Gap dọc mặc định</label>
+                                    <input type="number" id="gapDoc" class="form-control form-control-sm"
+                                           value="@layout.KhoangCachDoc" step="0.1"
+                                           onchange="fillGapDefaults()" />
+                                </div>
+                            </div>
+                            <div class="border-top mt-2 pt-2">
+                                <div class="text-muted mb-1" style="font-size:11px;font-weight:600;">
+                                    Căn X nhóm trường chính
+                                </div>
+                                <div class="d-flex flex-wrap align-items-end gap-2">
+                                    <div>
+                                        <label class="form-label form-label-sm mb-1">X mới (mm)</label>
+                                        <input type="number" id="bulkX" class="form-control form-control-sm"
+                                               style="width:90px" step="0.1" />
+                                    </div>
+                                    <button type="button" class="btn btn-outline-primary btn-sm" onclick="applyBulkX()">
+                                        <i class="bi bi-check2 me-1"></i>Áp dụng X
+                                    </button>
+                                    <div>
+                                        <label class="form-label form-label-sm mb-1">Bước dịch (mm)</label>
+                                        <input type="number" id="bulkXStep" class="form-control form-control-sm"
+                                               style="width:90px" value="0.5" step="0.1" />
+                                    </div>
+                                    <div class="btn-group btn-group-sm">
+                                        <button type="button" class="btn btn-outline-secondary" onclick="shiftBulkX(-1)">
+                                            <i class="bi bi-arrow-left"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-outline-secondary" onclick="shiftBulkX(1)">
+                                            <i class="bi bi-arrow-right"></i>
+                                        </button>
+                                    </div>
+                                    <span class="text-muted" style="font-size:10px;">
+                                        Không áp dụng cho Ngày SX và STT.
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Cột phải: bù sai số từng hàng -->
+                        <div class="col-12 col-md-4 border-start ps-3">
+                            <div class="text-muted mb-2" style="font-size:11px;font-weight:600;">
+                                Bù sai số từng hàng (mm)
+                                <span style="font-weight:normal;color:#adb5bd;">
+                                    (âm = lệch lên, dương = lệch xuống)
+                                </span>
+                            </div>
+                            <div id="gapVungContainer" class="d-flex flex-wrap gap-2">
+                                @for (int gi = 0; gi < numGaps; gi++) {
+                                    double gv = (layout.GapDocVung != null && gi < layout.GapDocVung.Count)
+                                                ? layout.GapDocVung[gi] : layout.KhoangCachDoc;
+                                    <div class="d-flex align-items-center gap-1">
+                                        <span style="font-size:11px;min-width:70px;color:#495057;">
+                                            Hàng @(gi+1)–@(gi+2):
+                                        </span>
+                                        <input type="number"
+                                               class="form-control form-control-sm gap-vung-input"
+                                               data-index="@gi" value="@gv.ToString("F1")"
+                                               step="0.1" style="max-width:70px" />
+                                        <span style="font-size:10px;color:#adb5bd">mm</span>
+                                    </div>
+                                }
+                            </div>
+                            <div id="gapVungNote" class="mt-1" style="font-size:10px;color:#adb5bd;">
+                                <i class="bi bi-info-circle me-1"></i>@numGaps vùng cho @layout.SoHang hàng
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div><!-- /editor-layout-row -->
+
+</div><!-- /editor-grid -->
+
+<div id="toast" class="position-fixed bottom-0 end-0 p-3" style="z-index:999"></div>
+
+@section Scripts {
+<script>
+const SC = 3.7795275591;
+const TRUNCATE_FIELD_KEY = 'nguoi_dong_goi';
+const MAIN_X_FIELD_KEYS = [
+    'ten_san_pham',
+    'ma_code',
+    'phieu_san_pham',
+    'ten_loai_giay',
+    'so_luong',
+    'ten_ca',
+    'nguoi_kiem',
+    'nguoi_dong_goi'
+];
+const FIELDS = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+    Model.CauHinh.AllFields().Select(f => new { key=f.Key, label=f.Label, cfg=f.Config })));
+const SAMPLE = {
+    ten_san_pham:'Tên sản phẩm dài có thể tràn', ma_code:'MC-2306',
+    phieu_san_pham:'1501/2026/HNI-OFF', ten_loai_giay:'Duplex DH 300gsm',
+    so_luong:'480', ten_ca:'Ca 1', ngay_san_xuat:'01/06/2026',
+    nguoi_kiem:'Nguyễn A', nguoi_dong_goi:'Trần B rất dài tên đóng gói', stt:'1'
+};
+
+let configs      = {};
+let truncateRight = @cfg.NguoiDongGoiTruncateRightMm;   // từ DB/default
+let activeKey = null, dragKey = null, dragOX = 0, dragOY = 0;
+FIELDS.forEach(f => { configs[f.key] = {...f.cfg}; });
+
+const G  = id => document.getElementById(id);
+const FV = id => parseFloat(G(id)?.value) || 0;
+const IV = id => parseInt(G(id)?.value)   || 0;
+
+// ── Fit text: co font tên SP cho vừa 1 dòng ──────────────
+function fitTenSanPham(el, maxWidthPx, baseFontSizePt) {
+    el.style.fontSize = baseFontSizePt + 'pt';
+    el.style.overflow = 'visible';
+    let fs = baseFontSizePt;
+    while (el.scrollWidth > maxWidthPx + 2 && fs > 6) {
+        fs -= 0.5;
+        el.style.fontSize = fs + 'pt';
+    }
+    if (el.scrollWidth > maxWidthPx + 2) {
+        el.style.overflow   = 'hidden';
+        el.style.textOverflow = 'ellipsis';
+        el.style.maxWidth   = maxWidthPx + 'px';
+    }
+}
+
+// ── Truncate người đóng gói ───────────────────────────────
+function getTruncateMaxWidthPx() {
+    const rn   = FV('rongNhan') || 91.95;
+    const xVal = configs[TRUNCATE_FIELD_KEY]?.x ?? 39;
+    const tr   = truncateRight;
+    const maxMm = Math.max(10, rn - xVal - tr);
+    return maxMm * SC;
+}
+
+function alignLabelPrefixes(root = document) {
+    const items = [...root.querySelectorAll('.label-with-prefix')];
+    const groups = [];
+    const toleranceMm = 3;
+    items.forEach(el => {
+        const x = parseFloat(el.dataset.labelXMm);
+        if (isNaN(x)) return;
+        let group = groups.find(g => Math.abs(g.x - x) <= toleranceMm);
+        if (!group) {
+            group = { x, items: [] };
+            groups.push(group);
+        }
+        group.items.push(el);
+    });
+    groups.forEach(group => {
+        let maxWidth = 0;
+        group.items.forEach(el => {
+            const prefix = el.querySelector('.field-prefix');
+            if (prefix) maxWidth = Math.max(maxWidth, prefix.getBoundingClientRect().width);
+        });
+        group.items.forEach(el => el.style.setProperty('--prefix-width-px', `${Math.ceil(maxWidth)}px`));
+    });
+}
+
+function setTokenContent(tok, f, c) {
+    const value = SAMPLE[f.key] || f.label;
+    tok.classList.remove('label-with-prefix');
+    tok.removeAttribute('data-label-x-mm');
+    tok.innerHTML = '';
+    if (c.hien_thi_nhan && c.nhan) {
+        tok.classList.add('label-with-prefix');
+        tok.dataset.labelXMm = c.x ?? 0;
+        const prefix = document.createElement('span');
+        prefix.className = 'field-prefix';
+        prefix.textContent = c.nhan;
+        const colon = document.createElement('span');
+        colon.className = 'field-colon';
+        colon.textContent = ':';
+        const val = document.createElement('span');
+        val.className = 'field-value';
+        val.textContent = value;
+        tok.append(prefix, colon, val);
+        return;
+    }
+    tok.textContent = value;
+}
+
+function redraw() {
+    const rn = FV('rongNhan') || 91.95;
+    const cn = FV('caoNhan')  || 59.94;
+    const cv = G('labelCanvas');
+    cv.style.width  = Math.round(rn * SC) + 'px';
+    cv.style.height = Math.round(cn * SC) + 'px';
+    G('canvasInfo').textContent = `${rn} × ${cn} mm`;
+    cv.innerHTML = '';
+
+    FIELDS.forEach(f => {
+        const c   = configs[f.key];
+        const tok = document.createElement('span');
+        tok.className =
+            'field-token' +
+            (!c.hien_thi       ? ' fhidden' : '') +
+            (activeKey===f.key ? ' active'  : '');
+        tok.dataset.key = f.key;
+        tok.style.cssText =
+            `left:${c.x*SC}px;top:${c.y*SC}px;` +
+            `font-family:${c.font||'Arial'},sans-serif;` +
+            `font-size:${c.co_chu||10}pt;color:${c.mau_chu||'#000'};` +
+            `font-weight:${c.in_dam?'bold':'normal'};` +
+            `font-style:${c.in_nghieng?'italic':'normal'};` +
+            `text-align:${c.can_chinh||'left'};` +
+            `white-space:nowrap;`;
+
+        tok.addEventListener('mousedown', onDragStart);
+        tok.addEventListener('click', () => selectField(f.key));
+        setTokenContent(tok, f, c);
+        cv.appendChild(tok);
+
+        // Apply fit/truncate sau khi append (cần DOM để đo)
+        requestAnimationFrame(() => {
+            if (f.key === 'ten_san_pham' && c.hien_thi) {
+                const maxW = (rn - c.x) * SC;
+                fitTenSanPham(tok, maxW, c.co_chu || 10);
+            }
+            if (f.key === TRUNCATE_FIELD_KEY && c.hien_thi) {
+                const maxW = getTruncateMaxWidthPx();
+                tok.style.maxWidth     = maxW + 'px';
+                tok.style.overflow     = 'hidden';
+                tok.style.textOverflow = 'ellipsis';
+                tok.style.whiteSpace   = 'nowrap';
+            }
+        });
+    });
+    alignLabelPrefixes(cv);
+}
+
+function onDragStart(e) {
+    dragKey = e.currentTarget.dataset.key;
+    const r = e.currentTarget.getBoundingClientRect();
+    dragOX  = e.clientX - r.left;
+    dragOY  = e.clientY - r.top;
+    e.currentTarget.classList.add('dragging');
+    e.preventDefault();
+}
+document.addEventListener('mousemove', e => {
+    if (!dragKey) return;
+    const r = G('labelCanvas').getBoundingClientRect();
+    configs[dragKey].x = Math.max(0, Math.round((e.clientX-r.left-dragOX)/SC*10)/10);
+    configs[dragKey].y = Math.max(0, Math.round((e.clientY-r.top -dragOY)/SC*10)/10);
+    redraw(); if (activeKey===dragKey) syncP();
+});
+document.addEventListener('mouseup', () => {
+    if (dragKey) {
+        document.querySelectorAll('.field-token').forEach(t=>t.classList.remove('dragging'));
+        dragKey = null;
+    }
+});
+
+function buildList() {
+    const el = G('fieldList'); el.innerHTML = '';
+    FIELDS.forEach(f => {
+        const c   = configs[f.key];
+        const row = document.createElement('div');
+        row.className = 'field-row' + (activeKey===f.key?' active':'');
+        row.dataset.key = f.key;
+        row.innerHTML   = `
+            <span class="dot" style="background:${c.mau_chu||'#000'}"></span>
+            <span class="small flex-grow-1">${f.label}</span>
+            <span class="badge ${c.hien_thi?'bg-success':'bg-secondary'}" style="font-size:9px">
+                ${c.hien_thi?'Hiện':'Ẩn'}
+            </span>`;
+        row.onclick = () => selectField(f.key);
+        el.appendChild(row);
+    });
+}
+
+function selectField(key) {
+    activeKey = key; buildList(); redraw(); syncP();
+    G('propPanel').classList.add('active');
+    const f = FIELDS.find(f=>f.key===key);
+    G('propTitle').innerHTML =
+        `<i class="bi bi-sliders me-1"></i>Cấu hình: <strong>${f?.label||key}</strong>`;
+    // Hiện/ẩn input truncate right
+    const wrap = G('pTruncateWrap');
+    
+    if (key === TRUNCATE_FIELD_KEY) wrap.classList.add('show');
+    else wrap.classList.remove('show');
+}
+
+function syncP() {
+    if (!activeKey) return;
+    const c = configs[activeKey];
+    G('pX').value    = c.x    ?? 0;
+    G('pY').value    = c.y    ?? 0;
+    G('pCoChu').value= c.co_chu ?? 10;
+    G('pMauChu').value        = c.mau_chu  || '#000000';
+    G('pFont').value          = c.font     || 'Arial';
+    G('pInDam').checked       = !!c.in_dam;
+    G('pInNghieng').checked   = !!c.in_nghieng;
+    G('pHienThi').checked     = c.hien_thi !== false;
+    G('pHienThiNhan').checked = !!c.hien_thi_nhan;
+    G('pNhan').value          = c.nhan || '';
+    document.querySelectorAll('#btnCC button').forEach(b=>
+        b.classList.toggle('active', b.dataset.v===(c.can_chinh||'left')));
+    // Sync truncate right nếu đang ở field người đóng gói
+    if (activeKey === TRUNCATE_FIELD_KEY) {
+        G('pTruncateRight').value = truncateRight;
+    }
+}
+
+function applyP() {
+    if (!activeKey) return;
+    const c = configs[activeKey];
+    c.x=FV('pX'); c.y=FV('pY'); c.co_chu=IV('pCoChu');
+    c.mau_chu=G('pMauChu').value; c.font=G('pFont').value;
+    c.in_dam=G('pInDam').checked; c.in_nghieng=G('pInNghieng').checked;
+    c.hien_thi=G('pHienThi').checked;
+    c.hien_thi_nhan=G('pHienThiNhan').checked;
+    c.nhan=G('pNhan').value;
+    // Lưu truncate right nếu đang ở field người đóng gói
+    if (activeKey === TRUNCATE_FIELD_KEY) {
+        truncateRight = parseFloat(G('pTruncateRight').value) || 26;
+    }
+    buildList(); redraw();
+}
+
+function setCC(v) {
+    if (!activeKey) return;
+    configs[activeKey].can_chinh = v;
+    document.querySelectorAll('#btnCC button').forEach(b=>
+        b.classList.toggle('active', b.dataset.v===v));
+    redraw();
+}
+
+function normalizeMm(value) {
+    return Math.round(value * 10) / 10;
+}
+
+function syncBulkXInput() {
+    const firstKey = MAIN_X_FIELD_KEYS.find(key => configs[key]);
+    if (!firstKey || !G('bulkX')) return;
+    G('bulkX').value = normalizeMm(configs[firstKey].x ?? 0);
+}
+
+function applyBulkX() {
+    const raw = parseFloat(G('bulkX')?.value);
+    if (isNaN(raw)) {
+        alert('Vui lòng nhập X mới cho nhóm trường chính.');
+        return;
+    }
+
+    const x = normalizeMm(raw);
+    MAIN_X_FIELD_KEYS.forEach(key => {
+        if (configs[key]) configs[key].x = x;
+    });
+
+    if (activeKey && MAIN_X_FIELD_KEYS.includes(activeKey)) syncP();
+    buildList();
+    redraw();
+}
+
+function shiftBulkX(direction) {
+    const stepRaw = parseFloat(G('bulkXStep')?.value);
+    const step = isNaN(stepRaw) ? 0.5 : Math.abs(stepRaw);
+
+    MAIN_X_FIELD_KEYS.forEach(key => {
+        if (!configs[key]) return;
+        const current = parseFloat(configs[key].x);
+        configs[key].x = normalizeMm((isNaN(current) ? 0 : current) + direction * step);
+    });
+
+    syncBulkXInput();
+    if (activeKey && MAIN_X_FIELD_KEYS.includes(activeKey)) syncP();
+    buildList();
+    redraw();
+}
+
+function onSoHangChange() { rebuildGapVung(); redraw(); }
+
+function rebuildGapVung() {
+    const n = Math.max(0, IV('soHang')-1);
+    const d = FV('gapDoc') || 9.9;
+    const old = [...document.querySelectorAll('.gap-vung-input')]
+                    .map(i=>parseFloat(i.value)||d);
+    const el = G('gapVungContainer'); el.innerHTML='';
+    for (let i=0;i<n;i++){
+        const row=document.createElement('div');
+        row.className='d-flex align-items-center gap-1';
+        row.innerHTML=`
+            <span style="font-size:11px;min-width:70px;color:#495057;">Hàng ${i+1}–${i+2}:</span>
+            <input type="number" class="form-control form-control-sm gap-vung-input"
+                   data-index="${i}" value="${(old[i]??d).toFixed(1)}"
+                   step="0.1" style="max-width:70px"/>
+            <span style="font-size:10px;color:#adb5bd">mm</span>`;
+        el.appendChild(row);
+    }
+    const note=G('gapVungNote');
+    if(note) note.innerHTML=`<i class="bi bi-info-circle me-1"></i>${n} vùng cho ${IV('soHang')} hàng`;
+}
+
+function fillGapDefaults() {
+    const d=FV('gapDoc')||9.9;
+    document.querySelectorAll('.gap-vung-input').forEach(i=>{
+        if(!i.value||parseFloat(i.value)===0) i.value=d.toFixed(1);
+    });
+}
+
+function getGapVung() {
+    const d = FV('gapDoc') || 9.9;
+    return [...document.querySelectorAll('.gap-vung-input')]
+        .map(i => {
+            const v = parseFloat(i.value);
+            return isNaN(v) ? d : v;
+        });
+}
+
+function buildJson() {
+    const gv    = getGapVung();
+    const bhRaw = G('buocHang')?.value?.trim();
+    const bh    = bhRaw ? parseFloat(bhRaw) : null;
+    return JSON.stringify({
+        layout: {
+            rong_nhan:         FV('rongNhan'),
+            cao_nhan:          FV('caoNhan'),
+            buoc_hang:         bh,
+            so_hang:           IV('soHang'),
+            so_cot:            IV('soCot'),
+            rong_trang_mm:     G('khoGiay').value === 'a4' ? 210 : 215.90,
+            cao_trang_mm:      G('khoGiay').value === 'a4' ? 297 : 279.40,
+            le_tren:           FV('leTren'),
+            le_duoi:           FV('leDuoi'),
+            le_trai:           FV('leTrai'),
+            le_phai:           FV('lePhai'),
+            khoang_cach_ngang: FV('gapNgang'),
+            khoang_cach_doc:   FV('gapDoc'),
+            gap_doc_vung:      gv.length > 0 ? gv : null
+        },
+        nguoi_dong_goi_truncate_right_mm: truncateRight,
+        ...configs
+    });
+}
+
+G('btnLuu').addEventListener('click', async()=>{
+    const req={
+        maMauIn:parseInt(G('maMauIn').value)||0,
+        tenMau:G('tenMau').value.trim(),
+        khoGiay:G('khoGiay').value,
+        soNhanMoiTrang:IV('soNhanMoiTrang'),
+        laMacDinh:G('laMacDinh').checked,
+        cauHinhJson:buildJson()
+    };
+    if(!req.tenMau){alert('Vui lòng nhập tên mẫu!');return;}
+    const btn=G('btnLuu'); btn.disabled=true;
+    btn.innerHTML='<span class="spinner-border spinner-border-sm"></span>';
+    const res=await fetch('/MauIn/Luu',{
+        method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(req)
+    }).then(r=>r.json());
+    btn.disabled=false; btn.innerHTML='<i class="bi bi-save me-1"></i>Lưu mẫu';
+    G('toast').innerHTML=`<div class="toast show align-items-center text-bg-${res.success?'success':'danger'} border-0">
+        <div class="d-flex"><div class="toast-body">${res.message}</div></div></div>`;
+    setTimeout(()=>G('toast').innerHTML='',2500);
+    if(res.success&&req.maMauIn===0) location.href='/MauIn/Editor?maMauIn='+res.data;
+});
+
+syncBulkXInput();
+buildList(); redraw();
+</script>
+}

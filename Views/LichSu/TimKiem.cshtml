@@ -1,0 +1,73 @@
+@model TimKiemVM
+@{ ViewData["Title"] = "Tìm kiếm tem"; }
+<div class="d-flex align-items-center mb-3">
+    <h5 class="mb-0 fw-bold"><i class="bi bi-search me-2 text-success"></i>Tìm kiếm tem cũ</h5>
+</div>
+<div class="card border-0 shadow-sm mb-3">
+    <div class="card-body">
+        <div class="input-group">
+            <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
+            <input type="text" id="keyword" class="form-control form-control-lg border-start-0"
+                   placeholder="Tên sản phẩm, mã code, số phiếu..." value="@Model.Keyword" autofocus />
+            <button class="btn btn-success px-4" id="btnTim">Tìm</button>
+        </div>
+        <div class="form-text mt-1"><i class="bi bi-info-circle me-1"></i>Tìm gần đúng — gõ "cozy" ra tất cả SP có chữ "cozy"</div>
+    </div>
+</div>
+
+@if (Model.DaTimKiem) {
+    <div class="mb-2 text-muted small">Kết quả: <strong>@Model.KetQua.Count</strong> bản ghi</div>
+    @if (!Model.KetQua.Any()) {
+        <div class="text-center text-muted py-5">
+            <i class="bi bi-inbox display-5 d-block mb-2"></i>Không tìm thấy kết quả cho "@Model.Keyword"
+        </div>
+    } else {
+        <div class="table-responsive">
+            <table class="table table-sm table-hover table-bordered align-middle">
+                <thead class="table-light">
+                    <tr class="text-center">
+                        <th>Tên SP</th><th>Mã code</th><th>Phiếu SP</th><th>Loại giấy</th>
+                        <th>SL SP</th><th>SL Nhãn</th>
+                        <th>Ca SX</th><th>Người kiểm</th><th>Người đóng gói</th><th>Ngày SX</th><th>Thời gian in</th><th>Máy</th>
+                        <th style="width:150px"> Hành động</th>
+                    </tr>
+                </thead>
+                <tbody>
+                @foreach (var ls in Model.KetQua) {
+                    <tr class="text-center">
+                        <td class="fw-semibold text-truncate" style="max-width:170px; white-space:wrap" title="@ls.TenSanPham">@ls.TenSanPham</td>
+                        <td><code class="text-danger" style = "white-space:wrap">@ls.MaCode</code></td>
+                        <td class="small text-muted">@ls.PhieuSanPham</td>
+                        <td class="small text-truncate" style="max-width:110px" title="@ls.TenLoaiGiay">@ls.TenLoaiGiay</td>
+                        <td class="text-end">@ls.SoLuongSanPham</td>
+                        <td class="text-end">@ls.SoLuongNhan</td>
+                        <td class="small">@ls.TenCa</td>
+                        <td class="small">@ls.NguoiKiem</td>
+                        <td class="small">@ls.NguoiDongGoi</td>
+                        <td class="small">@ls.NgaySanXuat?.ToString("dd/MM/yyyy")</td>
+                        <td class="small text-muted">@ls.ThoiGianTaoTem.ToString("dd/MM/yyyy HH:mm")</td>
+                        <td class="small text-muted">@ls.TenMayTinh</td>
+                        <td>
+                            <div class="d-flex gap-1">
+                                <a href="/LichSu/Copy?maLichSu=@ls.MaLichSu" class="btn btn-xs btn-outline-primary" title="Copy làm tem mới">
+                                    <i class="bi bi-copy me-1"></i>Copy
+                                </a>
+                                <a href="/PhienIn/InLai?maLichSu=@ls.MaLichSu" target="_blank" class="btn btn-xs btn-outline-secondary" title="In lại ngay">
+                                    <i class="bi bi-printer me-1"></i>In lại
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    }
+}
+@section Scripts {
+<script>
+const go=()=>{const k=document.getElementById('keyword').value.trim();if(k)location.href='/LichSu/TimKiem?keyword='+encodeURIComponent(k);};
+document.getElementById('btnTim').addEventListener('click',go);
+document.getElementById('keyword').addEventListener('keydown',e=>{if(e.key==='Enter')go();});
+</script>
+}

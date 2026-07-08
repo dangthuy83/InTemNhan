@@ -1,0 +1,144 @@
+@model CauHinhHeThongVM
+@{ ViewData["Title"] = "Cài đặt hệ thống"; }
+<div class="d-flex align-items-center mb-3">
+    <h5 class="mb-0 fw-bold"><i class="bi bi-sliders me-2 text-primary"></i>Cài đặt hệ thống</h5>
+    <button class="btn btn-success btn-sm ms-auto" id="btnLuu"><i class="bi bi-save me-1"></i>Lưu cài đặt</button>
+</div>
+<div class="row">
+    <div class="col-md-6 col-lg-5">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white py-2 fw-semibold small"><i class="bi bi-building me-1 text-primary"></i>Thông tin chung</div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Tên công ty</label>
+                    <input type="text" id="tenCongTy" class="form-control" value="@Model.TenCongTy"
+                           placeholder="Tên công ty hiển thị trên app" />
+                    <div class="form-text">Hiển thị trên thanh tiêu đề (chưa dùng, dự phòng)</div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Chi nhánh mặc định</label>
+                    <input type="text" id="chiNhanhMacDinh" class="form-control" value="@Model.ChiNhanhMacDinh"
+                           placeholder="VD: HNI-OFF" />
+                    <div class="form-text">Tự động điền vào ô Chi nhánh khi tạo tem mới</div>
+                </div>
+                <div id="saveMsg"></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 col-lg-7">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white py-2 fw-semibold small"><i class="bi bi-table me-1 text-primary"></i>Tất cả cấu hình</div>
+            <div class="card-body p-0">
+                <table class="table table-sm mb-0">
+                    <thead class="table-light"><tr><th>Key</th><th>Giá trị</th><th>Cập nhật</th></tr></thead>
+                    <tbody>
+                    @foreach (var c in Model.DsCauHinh) {
+                        <tr>
+                            <td><code>@c.Khoa</code></td>
+                            <td>@c.GiaTri</td>
+                            <td class="small text-muted">@c.NgayCapNhat.ToString("dd/MM/yyyy HH:mm")</td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="row mt-3">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white py-2 fw-semibold small d-flex align-items-center">
+                <i class="bi bi-pc-display me-1 text-primary"></i>Danh sách máy tính
+                <button class="btn btn-primary btn-sm ms-auto" id="btnThemMay">
+                    <i class="bi bi-plus me-1"></i>Thêm máy
+                </button>
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-sm mb-0" id="tblMay">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width:200px">Địa chỉ IP</th>
+                            <th>Tên máy</th>
+                            <th style="width:80px"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbodyMay"></tbody>
+                </table>
+            </div>
+            <div class="card-footer bg-white">
+                <button class="btn btn-success btn-sm" id="btnLuuMay">
+                    <i class="bi bi-save me-1"></i>Lưu danh sách máy
+                </button>
+                <span id="mayMsg" class="ms-2 small"></span>
+            </div>
+        </div>
+    </div>
+</div>
+@section Scripts {
+<script>
+document.getElementById('btnLuu').addEventListener('click',async()=>{
+    const items=[
+        {khoa:'ten_cong_ty',       giaTri:document.getElementById('tenCongTy').value.trim()},
+        {khoa:'chi_nhanh_mac_dinh',giaTri:document.getElementById('chiNhanhMacDinh').value.trim()}
+    ];
+    const res=await fetch('/CauHinh/Luu',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(items)}).then(r=>r.json());
+    const el=document.getElementById('saveMsg');
+    el.innerHTML=`<div class="alert alert-${res.success?'success':'danger'} py-1 small">${res.message}</div>`;
+    if(res.success) setTimeout(()=>location.reload(),800);
+});
+// ── Quản lý máy tính ──────────────────────────────
+function renderMay(ds) {
+    const tbody = document.getElementById('tbodyMay');
+    tbody.innerHTML = '';
+    ds.forEach((m, i) => {
+        tbody.insertAdjacentHTML('beforeend', `
+            <tr data-index="${i}">
+                <td><input type="text" class="form-control form-control-sm inp-ip"
+                           value="${m.ip}" placeholder="VD: 192.168.1.101" /></td>
+                <td><input type="text" class="form-control form-control-sm inp-ten"
+                           value="${m.tenMay}" placeholder="VD: PC-XUONG-01" /></td>
+                <td><button class="btn btn-xs btn-outline-danger btn-xoa-may">
+                    <i class="bi bi-x"></i></button></td>
+            </tr>`);
+    });
+}
+
+function getDsMay() {
+    return [...document.querySelectorAll('#tbodyMay tr')].map(tr => ({
+        ip:     tr.querySelector('.inp-ip').value.trim(),
+        tenMay: tr.querySelector('.inp-ten').value.trim()
+    })).filter(m => m.ip && m.tenMay);
+}
+
+// Load danh sách máy khi vào trang
+fetch('/CauHinh/LayDsMay').then(r => r.json()).then(ds => renderMay(ds));
+
+document.getElementById('btnThemMay').addEventListener('click', () => {
+    const ds = getDsMay();
+    ds.push({ ip: '', tenMay: '' });
+    renderMay(ds);
+    // Focus vào ô IP mới thêm
+    document.querySelectorAll('#tbodyMay .inp-ip')
+        [document.querySelectorAll('#tbodyMay tr').length - 1]?.focus();
+});
+
+document.getElementById('tbodyMay').addEventListener('click', e => {
+    const btn = e.target.closest('.btn-xoa-may');
+    if (!btn) return;
+    btn.closest('tr').remove();
+});
+
+document.getElementById('btnLuuMay').addEventListener('click', async () => {
+    const ds = getDsMay();
+    const res = await fetch('/CauHinh/LuuDsMay', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(ds)
+    }).then(r => r.json());
+    const el = document.getElementById('mayMsg');
+    el.innerHTML = `<span class="text-${res.success ? 'success' : 'danger'}">${res.message}</span>`;
+    setTimeout(() => el.innerHTML = '', 2500);
+});
+</script>
+}

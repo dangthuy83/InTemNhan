@@ -1,0 +1,126 @@
+# LabelPrint — Template & Print Engine
+
+## Thông số phôi in thực tế
+- Khổ giấy: **Letter 215.9 × 279.4mm** (hoặc A4 210×297mm)
+- CSS `@page`: dùng `size:215.9mm 279.4mm` (mm cụ thể, **không dùng "Letter"** — Chrome tự scale 93% nếu máy in đặt A4)
+- Lề trên thực đo: **~5mm**, lề dưới: **~5.5mm**
+- `CaoNhan` (hiển thị): **~60.8mm**
+- `BuocHang` (bước hàng thực tế): **~70mm**
+
+---
+
+## CauHinhModels.cs (Models/JsonModels/)
+
+### CauHinhTruong — config 1 field
+```csharp
+X, Y (mm), Font, CoChu (pt)
+InDam, InNghieng (bool)
+CanChinh ("left"|"center"|"right")
+MauChu (#hex), HienThi, HienThiNhan (bool)
+Nhan (string prefix label)
+```
+
+### LayoutMauIn — config bố cục tờ giấy
+```csharp
+RongNhan, CaoNhan       // kích thước 1 ô tem (mm)
+SoHang, SoCot           // số hàng × cột trên 1 tờ
+RongTrangMm, CaoTrangMm // kích thước tờ giấy (mm)
+LeTren, LeDuoi, LeTrai, LePhai  // lề (mm)
+KhoangCachNgang         // gap ngang giữa các cột (mm)
+KhoangCachDoc           // gap dọc mặc định (fallback)
+GapDocVung (List<double>?) // gap dọc từng vùng (index=0: gap hàng1-2, v.v.)
+BuocHang (double?)      // bước hàng thực tế đo từ phôi
+```
+
+**`TinhTopMm(row)`** — tính tọa độ top của hàng row (0-based):
+```csharp
+// Nếu BuocHang có giá trị:
+y = LeTren + row * BuocHang + Σ GapDocVung[0..row-1]
+// Fallback (template cũ không có BuocHang):
+y = LeTren + Σ(CaoNhan + LayGapDoc(r)) for r in 0..row-1
+```
+
+### CauHinhMauIn — toàn bộ config 1 template
+```csharp
+Layout (LayoutMauIn)
+TenSanPham, MaCode, PhieuSanPham, TenLoaiGiay
+SoLuong, TenCa, NgaySanXuat
+NguoiKiem, NguoiDongGoi, Stt
+```
+Serialize/deserialize qua `ToJson()` / `FromJson(string?)` — lưu vào cột `mau_in.cau_hinh_truong`
+
+**`AllFields()`** trả list `(Key, Label, Config)` dùng trong editor.
+
+---
+
+## Print Engine (Services/Services.cs — PrintService)
+
+### ExpandLabels — cho in mới (nhiều sản phẩm)
+1. Expand tất cả chi tiết → LabelItem list, **STT toàn cục 1→N**
+2. Tính `soTrang = CEIL(tongNhan / soNhan)`
+3. Sort: `pageKey = (idx % soTrang) + 1` → `OrderBy pageKey, ThenBy STT`
+
+> Kết quả: nhãn cùng vị trí slot trên tất cả trang in liên tiếp, đúng thứ tự tờ.
+
+### ExpandFromLichSu — cho in lại (1 sản phẩm từ lịch sử)
+- `Enumerable.Range(1, Math.Max(1, soLuongNhan))` — guard tránh count=0
+- STT 1→N đơn giản
+
+---
+
+## Views/PhienIn/Print.cshtml
+
+### Cấu trúc HTML
+```
+.ctrl (thanh điều khiển, sticky, ẩn khi print)
+.pages
+  .label-page (1 tờ giấy)
+    .label-cell (1 ô tem, position:absolute)
+      span.fit-ten-sp
+      span.fit-nguoi-dong-goi
+      span (các field khác)
+```
+
+### CSS quan trọng
+```css
+.label-cell {
+    position: absolute;
+    border: none;           /* ← border:none khi in, border chiếm không gian */
+    overflow: hidden;
+    box-sizing: content-box; /* ← PHẢI là content-box, border-box làm chữ bị cắt */
+}
+.label-page:not(:last-child) { page-break-after: always; } /* ← tránh trang trắng cuối */
+@page { size: 215.9mm 279.4mm; margin: 0; }
+```
+
+### JS Auto-fit font (fitWithBottomAnchor)
+Hằng số:
+```javascript
+const WRAP_SHIFT_MM      = -1.5;  // dịch khối 2 dòng lên (mm)
+const WRAP_AT_PT         = 9;     // ngưỡng pt cho phép wrap
+const MIN_PT             = 6;     // pt nhỏ nhất
+const PX_PER_MM          = 96 / 25.4;
+const PT_TO_MM           = 0.3528;
+const LINE_HEIGHT_FACTOR = 1.2;
+const TOLERANCE_PX       = 5;     // dung sai tránh false-positive sub-pixel
+```
+
+Logic:
+1. Co font từ basePt → WRAP_AT_PT nếu `scrollWidth > fixedWidth + TOLERANCE_PX`
+2. Vẫn tràn ở WRAP_AT_PT → wrap 2 dòng, neo đáy bằng `top` offset
+3. Không wrap → co tiếp xuống MIN_PT
+
+**Quan trọng**: `fixedWidth` lấy từ `data-max-width-mm` (tính từ Razor), **không đo `el.offsetWidth`** (sẽ sai vì span không có giới hạn width).
+
+### NguoiDongGoiTruncateRightMm
+Field riêng trong `CauHinhMauIn` — giới hạn độ rộng `nguoi_dong_goi` để không đè STT.
+
+---
+
+## WYSIWYG Editor (Views/MauIn/Editor.cshtml)
+
+- CSS Grid 2 cột: trái (danh sách mẫu + info) | phải (canvas + field list + property panel)
+- Drag-drop field token trên canvas preview
+- Real-time sync: kéo token → cập nhật X/Y input → re-render
+- Lưu: serialize `CauHinhMauIn` → JSON → POST `/MauIn/Luu`
+- **`currentMauIn`** là biến JS (không hardcode Razor) → có thể đổi template không cần reload

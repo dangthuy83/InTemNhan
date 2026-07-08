@@ -1,0 +1,9 @@
+body { font-size: 14px; background: #f4f6f9; }
+.card-hover { transition: transform .15s, box-shadow .15s; }
+.card-hover:hover { transform: translateY(-3px); box-shadow: 0 6px 20px rgba(0,0,0,.12) !important; }
+.table > :not(caption) > * > th,
+.table > :not(caption) > * > td { vertical-align: middle; }
+.btn-xs { padding: 2px 7px; font-size: 12px; line-height: 1.4; border-radius: 4px; }
+.alert-sm { font-size: 13px; }
+.table-responsive thead th { position: sticky; top: 0; background: #f8f9fa; z-index: 1; }
+@media print { nav, .ctrl, .btn { display: none !important; } }

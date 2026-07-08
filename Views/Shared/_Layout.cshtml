@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] — In Tem Nhãn</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" />
+    @await RenderSectionAsync("Styles", required: false)
+</head>
+<body>
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm">
+    <div class="container-fluid">
+        <a class="navbar-brand fw-bold" href="/"><i class="bi bi-printer-fill me-2"></i>In Tem Nhãn</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#nav"><span class="navbar-toggler-icon"></span></button>
+        <div class="collapse navbar-collapse" id="nav">
+            <ul class="navbar-nav me-auto gap-1">
+                <li class="nav-item"><a class="nav-link @NavActive("PhienIn","Index")" href="/PhienIn"><i class="bi bi-plus-circle me-1"></i>Tạo tem mới</a></li>
+                <li class="nav-item"><a class="nav-link @NavActive("LichSu","TimKiem")" href="/LichSu/TimKiem"><i class="bi bi-search me-1"></i>Tìm kiếm</a></li>
+                <li class="nav-item"><a class="nav-link @NavActive("LichSu","Index")" href="/LichSu"><i class="bi bi-clock-history me-1"></i>Lịch sử</a></li>
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle @NavCtrl("MauIn","CaSanXuat","CauHinh")" href="#" data-bs-toggle="dropdown"><i class="bi bi-gear me-1"></i>Cấu hình</a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="/MauIn/Editor"><i class="bi bi-layout-text-window me-2"></i>Mẫu in</a></li>
+                        <li><a class="dropdown-item" href="/CaSanXuat"><i class="bi bi-people me-2"></i>Ca sản xuất</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="/CauHinh"><i class="bi bi-sliders me-2"></i>Cài đặt hệ thống</a></li>
+                    </ul>
+                </li>
+            </ul>
+            @if (TempData["Error"] != null) {
+                <span class="navbar-text text-warning small me-3"><i class="bi bi-exclamation-triangle me-1"></i>@TempData["Error"]</span>
+            }
+            <span class="navbar-text text-white-50 small"><i class="bi bi-pc-display me-1"></i>@Environment.MachineName</span>
+        </div>
+    </div>
+</nav>
+<main class="container-fluid py-3">@RenderBody()</main>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/js/bootstrap.bundle.min.js"></script>
+@await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>
+@functions {
+    string NavActive(string c, string a) {
+        var rc = ViewContext.RouteData.Values["controller"]?.ToString();
+        var ra = ViewContext.RouteData.Values["action"]?.ToString();
+        return rc==c && ra==a ? "active" : "";
+    }
+    string NavCtrl(params string[] controllers) {
+        var rc = ViewContext.RouteData.Values["controller"]?.ToString();
+        return controllers.Contains(rc) ? "active" : "";
+    }
+}
