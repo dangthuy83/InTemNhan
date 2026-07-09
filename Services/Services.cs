@@ -77,6 +77,19 @@ public class PhienInService(
         return null;
     }
 
+    private static string? NormalizeNguoiDongGoi(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return null;
+
+        var normalized = value.Trim();
+        normalized = System.Text.RegularExpressions.Regex.Replace(normalized, @"[\r\n;]+", ",");
+        normalized = System.Text.RegularExpressions.Regex.Replace(normalized, @"\s*,+\s*", ", ");
+        normalized = System.Text.RegularExpressions.Regex.Replace(normalized, @"\s+", " ");
+        normalized = normalized.Trim(' ', ',');
+
+        return string.IsNullOrWhiteSpace(normalized) ? null : normalized;
+    }
+
     private static string? ValidateMauInTruocKhiIn(MauIn? mauIn, out CauHinhMauIn cauHinh)
     {
         cauHinh = new CauHinhMauIn();
@@ -218,7 +231,7 @@ public class PhienInService(
                 SoLuongSanPham=req.SoLuongSanPham, SoLuongNhan=req.SoLuongNhan,
                 SoLuongPsp=req.SoLuongPsp, GhiChu=req.GhiChu?.Trim(),
                 MaCa=req.MaCa, NgaySanXuat=ngay, NguoiKiem=req.NguoiKiem?.Trim(),
-                NguoiDongGoi=req.NguoiDongGoi?.Trim(), LoaiTao=req.LoaiTao, MaLichSuGoc=req.MaLichSuGoc
+                NguoiDongGoi=NormalizeNguoiDongGoi(req.NguoiDongGoi), LoaiTao=req.LoaiTao, MaLichSuGoc=req.MaLichSuGoc
             };
             ct.MaChiTiet = await chiTietRepo.ThemAsync(ct);
             return ApiResult<ChiTietInTem>.Ok(ct, $"Đã thêm dòng STT {ct.Stt}");

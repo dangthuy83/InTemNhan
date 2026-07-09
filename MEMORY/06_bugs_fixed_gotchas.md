@@ -184,6 +184,13 @@ Nếu file không tồn tại thì fallback về connection string local.
 - Sửa bổ sung: `stt` trong `Views/PhienIn/Print.cshtml` cũng dùng cùng cơ chế prefix/value, nên bật `Hiện tên trường` cho STT sẽ in tên trường. `nguoi_dong_goi` trong editor preview chuyển từ ellipsis một dòng sang wrap value-only để khớp bản in hơn.
 - Sửa bổ sung wrap `nguoi_dong_goi`: nếu field này có `Hiện tên trường` và nhãn không rỗng thì giới hạn wrap lấy theo X của `stt` đang hiển thị, chừa an toàn 1mm trước STT; nếu không có STT, STT bị ẩn, hoặc X STT không hợp lệ/không nằm bên phải `nguoi_dong_goi` thì không ép wrap theo STT. Nếu `nguoi_dong_goi` không hiện tên trường, vẫn phải dùng `nguoi_dong_goi_truncate_right_mm`/ô `Chừa phải` để giữ tương thích template cũ có phôi in sẵn và tránh đè dữ liệu lên vùng STT/phôi.
 
+## Cập nhật 2026-07-09 — chuẩn hóa Người đóng gói và siết wrap 2 dòng
+
+- `Views/PhienIn/Index.cshtml`: ô `Người đóng gói` được chuẩn hóa khi blur và trước khi thêm dòng. Quy tắc: trim, đổi xuống dòng/chấm phẩy thành dấu phẩy, gom nhiều dấu phẩy thành `, `, gom khoảng trắng liên tiếp thành 1 khoảng trắng. Không dùng dấu `/` làm phân cách và không tách tên theo khoảng trắng.
+- `PhienInService.ThemChiTietAsync` chuẩn hóa lại `NguoiDongGoi` trước khi lưu để dữ liệu mới sạch cả khi client bị bỏ qua.
+- `Views/PhienIn/Print.cshtml`: wrap `Người đóng gói` vẫn giữ 9pt, tối đa 2 dòng, line-height cố định 1.1, có safety đáy 0.5mm để tránh bị cắt khi field nằm sát đáy nhãn. Khi chuỗi cũ có dấu phẩy nhưng thiếu khoảng trắng, bản in thêm điểm ngắt sau dấu phẩy và fallback `overflow-wrap:anywhere` nếu vẫn quá dài.
+- `Views/MauIn/Editor.cshtml`: preview `Người đóng gói` dùng logic gần bản in hơn, clamp tối đa 2 dòng ở 9pt và tránh vượt đáy nhãn. Nhãn cấu hình đổi từ `Giới hạn wrap` sang `Vùng cấm bên phải`; tăng giá trị này nghĩa là vùng chữ còn lại hẹp hơn. Đồng thời sửa bug `parseFloat(value) || 26` để giá trị 0 không bị đổi về mặc định 26.
+
 ### 1. Race condition khi thêm/xóa chi tiết và đổi template — đã xử lý phần code
 **Vị trí**: `Services/Services.cs`, `Data/Repositories/Implementations/Repositories.cs`
 **Mô tả cũ**: `ThemChiTietAsync`, `XoaAsync`, `CapNhatMauInAsync` có các bước đọc/ghi rời nhau, chưa gom transaction end-to-end. Trên LAN nhiều client có thể sinh trùng `Stt`, lệch `SoTrang`, hoặc cập nhật template không đồng bộ với chi tiết.

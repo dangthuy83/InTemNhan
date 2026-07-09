@@ -302,15 +302,15 @@
                     <div class="col-auto" id="pTruncateWrap" hidden>
                         <div>
                             <label class="form-label form-label-sm">
-                                Giới hạn wrap
+                                Vùng cấm bên phải
                                 <i class="bi bi-info-circle text-muted ms-1"
-                                   title="Nếu Người đóng gói có hiện tên trường, wrap trước X STT 1mm. Nếu không hiện tên trường, dùng Chừa phải để tránh đè phôi in sẵn."
+                                   title="Nếu Người đóng gói có hiện tên trường, wrap trước X STT 1mm. Nếu không hiện tên trường, giá trị này là phần bên phải của nhãn không được in đè lên phôi/STT."
                                    data-bs-toggle="tooltip"></i>
                             </label>
                             <input type="number" id="pTruncateRight" class="form-control form-control-sm"
                                    style="width:80px" step="0.5" min="0" onchange="applyP()" />
                             <div class="small text-muted mt-1" style="max-width:180px">
-                                Không hiện tên trường: dùng giá trị này. Có hiện tên trường: theo X của STT, chừa 1mm.
+                                Không hiện tên trường: tăng số này làm vùng chữ hẹp lại. Có hiện tên trường: theo X của STT, chừa 1mm.
                             </div>
                         </div>
                     </div>
@@ -486,6 +486,10 @@
 <script>
 const SC = 3.7795275591;
 const TRUNCATE_FIELD_KEY = 'nguoi_dong_goi';
+const PACKER_WRAP_AT_PT = 9;
+const PACKER_WRAP_MAX_LINES = 2;
+const PACKER_WRAP_LINE_HEIGHT = 1.1;
+const PACKER_WRAP_BOTTOM_SAFE_MM = 0.5;
 const MAIN_X_FIELD_KEYS = [
     'ten_san_pham',
     'ma_code',
@@ -547,7 +551,8 @@ function getTruncateMaxWidthPx() {
 
     if (!hasPackerPrefix) {
         const rn = FV('rongNhan') || 91.95;
-        const tr = parseFloat(truncateRight) || 26;
+        const trRaw = parseFloat(truncateRight);
+        const tr = isNaN(trRaw) ? 26 : trRaw;
         return Math.max(10, rn - xPacker - tr) * SC;
     }
 
@@ -559,6 +564,11 @@ function getTruncateMaxWidthPx() {
 
     const maxMm = xStt - xPacker - 1;
     return maxMm > 0 ? maxMm * SC : null;
+}
+
+function allowBreakAfterComma(valueEl) {
+    const raw = valueEl.textContent.replace(/\u200B/g, '');
+    if (raw.includes(',')) valueEl.textContent = raw.replace(/,\s*/g, ',\u200B ');
 }
 
 function alignLabelPrefixes(root = document) {
@@ -651,17 +661,56 @@ function redraw() {
                 if (maxWidthPx) {
                     const prefixWidth = target === tok ? 0 : Math.max(0, tok.getBoundingClientRect().width - target.getBoundingClientRect().width);
                     const maxW = Math.max(12, maxWidthPx - prefixWidth);
+                    const basePt = c.co_chu || 10;
+                    target.style.fontSize = basePt + 'pt';
+                    target.style.whiteSpace = 'nowrap';
+                    target.style.width = '';
+                    target.style.maxWidth = '';
+                    target.style.maxHeight = '';
+                    target.style.display = '';
+                    target.style.webkitLineClamp = '';
+                    target.style.webkitBoxOrient = '';
+                    const shouldWrap = target.scrollWidth > maxW + 2;
                     target.style.width        = maxW + 'px';
                     target.style.maxWidth     = maxW + 'px';
                     target.style.overflow     = 'hidden';
                     target.style.textOverflow = '';
-                    target.style.whiteSpace   = 'normal';
+                    if (shouldWrap) {
+                        const wrapPt = Math.min(basePt, PACKER_WRAP_AT_PT);
+                        allowBreakAfterComma(target);
+                        target.style.fontSize = wrapPt + 'pt';
+                        target.style.whiteSpace = 'normal';
+                        target.style.lineHeight = PACKER_WRAP_LINE_HEIGHT;
+                        target.style.overflowWrap = 'anywhere';
+                        target.style.wordBreak = 'normal';
+                        target.style.maxHeight = (wrapPt * 96 / 72 * PACKER_WRAP_LINE_HEIGHT * PACKER_WRAP_MAX_LINES) + 'px';
+                        target.style.display = '-webkit-box';
+                        target.style.webkitLineClamp = String(PACKER_WRAP_MAX_LINES);
+                        target.style.webkitBoxOrient = 'vertical';
+                        const blockHeightPx = wrapPt * 96 / 72 * PACKER_WRAP_LINE_HEIGHT * PACKER_WRAP_MAX_LINES;
+                        const maxTopPx = (cn - PACKER_WRAP_BOTTOM_SAFE_MM) * SC - blockHeightPx;
+                        tok.style.top = Math.max(0, Math.min(c.y * SC, maxTopPx)) + 'px';
+                    } else {
+                        target.style.whiteSpace = 'nowrap';
+                        target.style.lineHeight = '';
+                        target.style.overflowWrap = '';
+                        target.style.wordBreak = '';
+                        tok.style.top = `${c.y*SC}px`;
+                    }
                 } else {
                     target.style.width        = '';
                     target.style.maxWidth     = '';
+                    target.style.maxHeight    = '';
                     target.style.overflow     = 'visible';
                     target.style.textOverflow = '';
                     target.style.whiteSpace   = 'nowrap';
+                    target.style.lineHeight   = '';
+                    target.style.overflowWrap = '';
+                    target.style.wordBreak = '';
+                    target.style.display = '';
+                    target.style.webkitLineClamp = '';
+                    target.style.webkitBoxOrient = '';
+                    tok.style.top = `${c.y*SC}px`;
                 }
             }
         });
@@ -752,7 +801,8 @@ function applyP() {
     c.hien_thi_nhan=G('pHienThiNhan').checked;
     c.nhan=G('pNhan').value;
     if (activeKey === TRUNCATE_FIELD_KEY) {
-        truncateRight = parseFloat(G('pTruncateRight').value) || 26;
+        const trRaw = parseFloat(G('pTruncateRight').value);
+        truncateRight = isNaN(trRaw) ? 26 : trRaw;
     }
     buildList(); redraw();
 }

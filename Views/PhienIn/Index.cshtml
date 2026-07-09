@@ -406,6 +406,19 @@ const POST = async (u, d) => fetch(u, {
     body: JSON.stringify(d)
 }).then(r => r.json());
 
+function normalizeNguoiDongGoi(value) {
+    return String(value ?? '')
+        .trim()
+        .replace(/[\r\n;]+/g, ',')
+        .replace(/\s*,+\s*/g, ', ')
+        .replace(/\s+/g, ' ')
+        .replace(/^[,\s]+|[,\s]+$/g, '');
+}
+
+G('nguoiDongGoi').addEventListener('blur', function () {
+    this.value = normalizeNguoiDongGoi(this.value);
+});
+
 // Auto-fill mã code khi chọn tên SP
 G('tenSanPham').addEventListener('input', function () {
     const c = spMap[this.value];
@@ -500,13 +513,15 @@ G('btnThem').addEventListener('click', async () => {
         return;
     }
     const ngayIso = V('ngaySanXuatIso') || null;
+    const nguoiDongGoi = normalizeNguoiDongGoi(G('nguoiDongGoi')?.value);
+    SV('nguoiDongGoi', nguoiDongGoi);
     const req = {
         maPhien: MP, loaiTao: CP ? 'copy' : 'moi', maLichSuGoc: CP?.maLichSuGoc || null,
         tenSanPham: V('tenSanPham'), maCode: V('maCode'), soPhieu: V('soPhieu'),
         namPhieu: IV('namPhieu'), chiNhanh: V('chiNhanh'), tenLoaiGiay: V('tenLoaiGiay'),
         soLuongSanPham: IV('soLuongSp'), soLuongNhan: IV('soLuongNhan'),
         maCa: IVN('maCa'), ngaySanXuat: ngayIso,
-        nguoiKiem: V('nguoiKiem') || null, nguoiDongGoi: V('nguoiDongGoi') || null,
+        nguoiKiem: V('nguoiKiem') || null, nguoiDongGoi: nguoiDongGoi || null,
         soLuongPsp: IV('soLuongPSP') || null, ghiChu: V('ghiChu') || null
     };
     if (!req.tenSanPham || !req.maCode || !req.soPhieu || !req.tenLoaiGiay || req.soLuongSanPham <= 0 || req.soLuongNhan <= 0) {

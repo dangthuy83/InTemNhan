@@ -147,6 +147,7 @@ body{background:#e5e5e5;font-family:Arial,sans-serif;}
                 : "";
             <span class="@FieldClass(cfg.NguoiDongGoi, "fit-nguoi-dong-goi")" data-label-x-mm="@DataX(cfg.NguoiDongGoi)" data-base-pt="@cfg.NguoiDongGoi.CoChu" data-y-mm="@cfg.NguoiDongGoi.Y"
                   data-max-width-mm="@nguoiDongGoiMaxWidthAttr"
+                  data-label-height-mm="@layout.CaoNhan.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)"
                   style="@NguoiDongGoiStyle(cfg.NguoiDongGoi)">
               @if (ShowPrefix(cfg.NguoiDongGoi)) { <span class="field-prefix">@cfg.NguoiDongGoi.Nhan</span><span class="field-colon">:</span><span class="field-value">@lb.NguoiDongGoi</span> }
               else { @lb.NguoiDongGoi }
@@ -173,12 +174,20 @@ body{background:#e5e5e5;font-family:Arial,sans-serif;}
 const WRAP_SHIFT_MM = -1.5;     // ← CHỈNH SỐ NÀY nếu vẫn bị dính
 const WRAP_AT_PT    = 9;    // ngưỡng pt bắt đầu cho phép wrap
 const MIN_PT        = 6;     // pt nhỏ nhất khi không wrap
+const WRAP_MAX_LINES = 2;
+const WRAP_LINE_HEIGHT_FACTOR = 1.1;
+const WRAP_BOTTOM_SAFE_MM = 0.5;
 const PX_PER_MM      = 96 / 25.4;
 const PT_TO_MM        = 0.3528;
 const LINE_HEIGHT_FACTOR = 1.2;
 const TOLERANCE_PX = 5; // MỚI — tăng dung sai lên 5px (~1.3mm) để tránh false-positive do sai số mm/px
 
-function fitWithBottomAnchor(el, basePt, yMm, maxWidthMm) {
+function allowBreakAfterComma(valueEl) {
+    const raw = valueEl.textContent.replace(/\u200B/g, '');
+    if (raw.includes(',')) valueEl.textContent = raw.replace(/,\s*/g, ',\u200B ');
+}
+
+function fitWithBottomAnchor(el, basePt, yMm, maxWidthMm, labelHeightMm = null) {
     const valueEl = el.querySelector('.field-value') || el;
     const hasPrefix = valueEl !== el;
 
@@ -192,6 +201,13 @@ function fitWithBottomAnchor(el, basePt, yMm, maxWidthMm) {
     valueEl.style.overflow = 'visible';
     valueEl.style.textOverflow = '';
     valueEl.style.width = '';
+    valueEl.style.maxHeight = '';
+    valueEl.style.lineHeight = '';
+    valueEl.style.overflowWrap = '';
+    valueEl.style.wordBreak = '';
+    valueEl.style.display = '';
+    valueEl.style.webkitLineClamp = '';
+    valueEl.style.webkitBoxOrient = '';
     el.style.width         = '';   // bỏ width cũ (nếu có từ lần fit trước) để đo lại tự nhiên
 
     const fixedWidth = maxWidthMm * PX_PER_MM;  // độ rộng khung CỐ ĐỊNH tính từ mm Razor
@@ -210,8 +226,18 @@ function fitWithBottomAnchor(el, basePt, yMm, maxWidthMm) {
     if (valueEl.scrollWidth > valueWidth + TOLERANCE_PX) {
         // Vẫn tràn ở WRAP_AT_PT → cho phép wrap 2 dòng, dừng co font tại đây
         isWrapped = true;
+        fs = Math.min(fs, WRAP_AT_PT);
+        valueEl.style.fontSize = fs + 'pt';
+        allowBreakAfterComma(valueEl);
         valueEl.style.whiteSpace = 'normal';
+        valueEl.style.lineHeight = WRAP_LINE_HEIGHT_FACTOR;
+        valueEl.style.overflowWrap = 'anywhere';
+        valueEl.style.wordBreak = 'normal';
         valueEl.style.width      = valueWidth + 'px';
+        valueEl.style.maxHeight  = (fs * 96 / 72 * WRAP_LINE_HEIGHT_FACTOR * WRAP_MAX_LINES) + 'px';
+        valueEl.style.display = '-webkit-box';
+        valueEl.style.webkitLineClamp = String(WRAP_MAX_LINES);
+        valueEl.style.webkitBoxOrient = 'vertical';
         el.style.width           = fixedWidth + 'px';
     }
 
@@ -225,11 +251,17 @@ function fitWithBottomAnchor(el, basePt, yMm, maxWidthMm) {
         const singleLineHeightPx = valueEl.offsetHeight;
         valueEl.style.whiteSpace = 'normal';
 
-        const singleLineHeightMm = singleLineHeightPx / PX_PER_MM;
+        const computedFontPx = parseFloat(getComputedStyle(valueEl).fontSize) || (fs * 96 / 72);
+        const singleLineHeightMm = (computedFontPx * WRAP_LINE_HEIGHT_FACTOR) / PX_PER_MM;
+        const blockHeightMm = singleLineHeightMm * WRAP_MAX_LINES;
 
         // Đáy dòng 1 = vị trí gốc (đã bù co font) trừ thêm WRAP_SHIFT_MM
         const bottomDong1Mm = yMm + deltaMm - WRAP_SHIFT_MM;
-        const topKhoiMm     = bottomDong1Mm - singleLineHeightMm; // top của khối 2 dòng
+        const preferredTopMm = bottomDong1Mm - singleLineHeightMm;
+        const maxTopMm = Number.isFinite(labelHeightMm) && labelHeightMm > 0
+            ? labelHeightMm - blockHeightMm - WRAP_BOTTOM_SAFE_MM
+            : preferredTopMm;
+        const topKhoiMm = Math.max(0, Math.min(preferredTopMm, maxTopMm));
         el.style.top = topKhoiMm + 'mm';
     } else {
         // Không wrap — co tiếp xuống MIN_PT nếu vẫn tràn ở WRAP_AT_PT
@@ -264,8 +296,9 @@ function fitAllNguoiDongGoi() {
         const basePt     = parseFloat(el.dataset.basePt) || 10;
         const yMm        = parseFloat(el.dataset.yMm) || 0;
         const maxWidthMm = parseFloat(el.dataset.maxWidthMm);
+        const labelHeightMm = parseFloat(el.dataset.labelHeightMm);
         if (isNaN(maxWidthMm) || maxWidthMm <= 0) return;
-        fitWithBottomAnchor(el, basePt, yMm, maxWidthMm);
+        fitWithBottomAnchor(el, basePt, yMm, maxWidthMm, labelHeightMm);
     });
 }
 
