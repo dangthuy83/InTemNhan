@@ -26,8 +26,12 @@
 
     // Người đóng gói: tương tự, không set max-width cứng trong CSS
     string NguoiDongGoiStyle(CauHinhTruong f) => FieldStyle(f);
-    double NguoiDongGoiMaxWidthMm(CauHinhTruong f) =>
-        Math.Max(10, layout.RongNhan - f.X - cfg.NguoiDongGoiTruncateRightMm);
+    double? NguoiDongGoiMaxWidthMm(CauHinhTruong f)
+    {
+        if (!cfg.Stt.HienThi || cfg.Stt.X <= f.X) return null;
+        var maxWidth = cfg.Stt.X - f.X - 1;
+        return maxWidth > 0 ? maxWidth : null;
+    }
 
     bool ShowPrefix(CauHinhTruong f) =>
         f.HienThiNhan && !string.IsNullOrWhiteSpace(f.Nhan);
@@ -134,8 +138,12 @@ body{background:#e5e5e5;font-family:Arial,sans-serif;}
           @if(cfg.NgaySanXuat.HienThi && !string.IsNullOrEmpty(lb.NgaySanXuat)){<span class="@FieldClass(cfg.NgaySanXuat)" data-label-x-mm="@DataX(cfg.NgaySanXuat)" style="@FieldStyle(cfg.NgaySanXuat)">@if (ShowPrefix(cfg.NgaySanXuat)) { <span class="field-prefix">@cfg.NgaySanXuat.Nhan</span><span class="field-colon">:</span><span class="field-value">@lb.NgaySanXuat</span> } else { @lb.NgaySanXuat }</span>}
           @if(cfg.NguoiKiem.HienThi && !string.IsNullOrEmpty(lb.NguoiKiem)){<span class="@FieldClass(cfg.NguoiKiem)" data-label-x-mm="@DataX(cfg.NguoiKiem)" style="@FieldStyle(cfg.NguoiKiem)">@if (ShowPrefix(cfg.NguoiKiem)) { <span class="field-prefix">@cfg.NguoiKiem.Nhan</span><span class="field-colon">:</span><span class="field-value">@lb.NguoiKiem</span> } else { @lb.NguoiKiem }</span>}
           @if(cfg.NguoiDongGoi.HienThi && !string.IsNullOrEmpty(lb.NguoiDongGoi)){
+            var nguoiDongGoiMaxWidth = NguoiDongGoiMaxWidthMm(cfg.NguoiDongGoi);
+            var nguoiDongGoiMaxWidthAttr = nguoiDongGoiMaxWidth.HasValue
+                ? nguoiDongGoiMaxWidth.Value.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)
+                : "";
             <span class="@FieldClass(cfg.NguoiDongGoi, "fit-nguoi-dong-goi")" data-label-x-mm="@DataX(cfg.NguoiDongGoi)" data-base-pt="@cfg.NguoiDongGoi.CoChu" data-y-mm="@cfg.NguoiDongGoi.Y"
-                  data-max-width-mm="@NguoiDongGoiMaxWidthMm(cfg.NguoiDongGoi).ToString("F2")"
+                  data-max-width-mm="@nguoiDongGoiMaxWidthAttr"
                   style="@NguoiDongGoiStyle(cfg.NguoiDongGoi)">
               @if (ShowPrefix(cfg.NguoiDongGoi)) { <span class="field-prefix">@cfg.NguoiDongGoi.Nhan</span><span class="field-colon">:</span><span class="field-value">@lb.NguoiDongGoi</span> }
               else { @lb.NguoiDongGoi }
@@ -252,7 +260,8 @@ function fitAllNguoiDongGoi() {
     document.querySelectorAll('.fit-nguoi-dong-goi').forEach(el => {
         const basePt     = parseFloat(el.dataset.basePt) || 10;
         const yMm        = parseFloat(el.dataset.yMm) || 0;
-        const maxWidthMm = parseFloat(el.dataset.maxWidthMm) || 26;
+        const maxWidthMm = parseFloat(el.dataset.maxWidthMm);
+        if (isNaN(maxWidthMm) || maxWidthMm <= 0) return;
         fitWithBottomAnchor(el, basePt, yMm, maxWidthMm);
     });
 }

@@ -298,17 +298,16 @@
                                     onclick="setCC('right')"><i class="bi bi-text-right"></i></button>
                         </div>
                     </div>
-                    <!-- Truncate right mm — chỉ hiện khi chọn field nguoi_dong_goi -->
+                    <!-- Wrap boundary — chỉ hiện khi chọn field nguoi_dong_goi -->
                     <div class="col-auto" id="pTruncateWrap" hidden>
                         <div>
                             <label class="form-label form-label-sm">
-                                Chừa phải (mm)
+                                Giới hạn wrap
                                 <i class="bi bi-info-circle text-muted ms-1"
-                                   title="Khoảng trống bên phải tính từ mép phải nhãn. Dùng để tránh đè lên STT."
+                                   title="Nếu STT đang hiện và X STT hợp lệ, Người đóng gói sẽ wrap trước X STT 1mm. Nếu STT ẩn hoặc X không hợp lệ thì không ép wrap."
                                    data-bs-toggle="tooltip"></i>
                             </label>
-                            <input type="number" id="pTruncateRight" class="form-control form-control-sm"
-                                   style="width:80px" step="0.5" min="0" onchange="applyP()" />
+                            <div class="small text-muted" style="max-width:160px">Theo X của STT, chừa 1mm</div>
                         </div>
                     </div>
                     <div class="col">
@@ -503,7 +502,7 @@ const SAMPLE = {
 };
 
 let configs      = {};
-let truncateRight = @cfg.NguoiDongGoiTruncateRightMm;   // từ DB/default
+let truncateRight = @cfg.NguoiDongGoiTruncateRightMm;   // legacy: giữ nguyên khi lưu, wrap hiện theo X của STT
 let activeKey = null, dragKey = null, dragOX = 0, dragOY = 0;
 FIELDS.forEach(f => { configs[f.key] = {...f.cfg}; });
 
@@ -535,11 +534,16 @@ function fitTenSanPham(el, maxWidthPx, baseFontSizePt) {
 
 // ── Truncate người đóng gói ───────────────────────────────
 function getTruncateMaxWidthPx() {
-    const rn   = FV('rongNhan') || 91.95;
-    const xVal = configs[TRUNCATE_FIELD_KEY]?.x ?? 39;
-    const tr   = truncateRight;
-    const maxMm = Math.max(10, rn - xVal - tr);
-    return maxMm * SC;
+    const packer = configs[TRUNCATE_FIELD_KEY];
+    const stt = configs.stt;
+    if (!packer || !stt || stt.hien_thi === false) return null;
+
+    const xPacker = parseFloat(packer.x);
+    const xStt = parseFloat(stt.x);
+    if (isNaN(xPacker) || isNaN(xStt) || xStt <= xPacker) return null;
+
+    const maxMm = xStt - xPacker - 1;
+    return maxMm > 0 ? maxMm * SC : null;
 }
 
 function alignLabelPrefixes(root = document) {
@@ -628,13 +632,22 @@ function redraw() {
             }
             if (f.key === TRUNCATE_FIELD_KEY && c.hien_thi) {
                 const target = tok.querySelector('.field-value') || tok;
-                const prefixWidth = target === tok ? 0 : Math.max(0, tok.getBoundingClientRect().width - target.getBoundingClientRect().width);
-                const maxW = Math.max(12, getTruncateMaxWidthPx() - prefixWidth);
-                target.style.width        = maxW + 'px';
-                target.style.maxWidth     = maxW + 'px';
-                target.style.overflow     = 'hidden';
-                target.style.textOverflow = '';
-                target.style.whiteSpace   = 'normal';
+                const maxWidthPx = getTruncateMaxWidthPx();
+                if (maxWidthPx) {
+                    const prefixWidth = target === tok ? 0 : Math.max(0, tok.getBoundingClientRect().width - target.getBoundingClientRect().width);
+                    const maxW = Math.max(12, maxWidthPx - prefixWidth);
+                    target.style.width        = maxW + 'px';
+                    target.style.maxWidth     = maxW + 'px';
+                    target.style.overflow     = 'hidden';
+                    target.style.textOverflow = '';
+                    target.style.whiteSpace   = 'normal';
+                } else {
+                    target.style.width        = '';
+                    target.style.maxWidth     = '';
+                    target.style.overflow     = 'visible';
+                    target.style.textOverflow = '';
+                    target.style.whiteSpace   = 'nowrap';
+                }
             }
         });
     });
@@ -709,10 +722,6 @@ function syncP() {
     G('pNhan').value          = c.nhan || '';
     document.querySelectorAll('#btnCC button').forEach(b=>
         b.classList.toggle('active', b.dataset.v===(c.can_chinh||'left')));
-    // Sync truncate right nếu đang ở field người đóng gói
-    if (activeKey === TRUNCATE_FIELD_KEY) {
-        G('pTruncateRight').value = truncateRight;
-    }
 }
 
 function applyP() {
@@ -724,10 +733,6 @@ function applyP() {
     c.hien_thi=G('pHienThi').checked;
     c.hien_thi_nhan=G('pHienThiNhan').checked;
     c.nhan=G('pNhan').value;
-    // Lưu truncate right nếu đang ở field người đóng gói
-    if (activeKey === TRUNCATE_FIELD_KEY) {
-        truncateRight = parseFloat(G('pTruncateRight').value) || 26;
-    }
     buildList(); redraw();
 }
 
