@@ -10,39 +10,37 @@
 /* ── Grid 2 cột: trái 1 hàng | phải 3 hàng ── */
 .editor-grid {
     display: grid;
-    grid-template-columns: 260px 1fr;
-    grid-template-rows: auto auto auto;
+    grid-template-columns: 260px minmax(640px, 1fr) 360px;
+    grid-template-rows: auto auto;
     gap: 12px;
     align-items: start;
 }
-/* Cột trái: chỉ chiếm hàng 1 (danh sách mẫu + thông tin mẫu) */
 .editor-config {
     grid-column: 1;
     grid-row: 1;
 }
-/* Cột phải hàng 1: canvas + field list */
-.editor-top-right {
+.editor-preview {
     grid-column: 2;
     grid-row: 1;
-    display: flex;
-    gap: 12px;
-    align-items: flex-start;
 }
-/* Cột phải hàng 2: property panel sát dưới canvas */
-.editor-prop-right {
-    grid-column: 2;
-    grid-row: 2;
+.editor-inspector {
+    grid-column: 3;
+    grid-row: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
 }
 /* Hàng 3 full width: layout tờ giấy + gap config */
 .editor-layout-row {
     grid-column: 1 / -1;
-    grid-row: 3;
+    grid-row: 2;
 }
 
 /* ── Canvas ─────────────────────────────────────── */
 #canvasWrap {
     background: #d0d0d0;
-    width: 620px;
+    width: 100%;
+    min-width: 620px;
     height: 320px;
     padding: 12px;
     display: flex;
@@ -100,6 +98,7 @@
 /* ── Property panel ─────────────────────────────── */
 #propPanel { opacity: .45; pointer-events: none; transition: opacity .2s; }
 #propPanel.active { opacity: 1; pointer-events: all; }
+#propPanel .card-body { max-height: 430px; overflow-y: auto; }
 
 /* ── Truncate extra field (ẩn mặc định) ────────── */
 /*#pTruncateWrap { display: none; }
@@ -197,44 +196,41 @@
 
     </div><!-- /editor-config -->
 
-    <!-- ════ CỘT PHẢI TRÊN: Canvas + Field list ════ -->
-    <div class="editor-top-right">
+    <!-- ════ CỘT GIỮA: Canvas preview ════ -->
+    <div class="editor-preview">
 
         <!-- Canvas preview -->
-        <div style="flex-shrink:0;">
-            <div class="card border-0 shadow-sm">
-                <div class="card-header bg-white py-2 d-flex align-items-center gap-2">
-                    <span class="fw-semibold small">
-                        <i class="bi bi-eye me-1 text-primary"></i>Preview nhãn
-                    </span>
-                    <span class="badge bg-light text-dark border ms-auto small" id="canvasInfo"></span>
-                </div>
-                <div id="canvasWrap">
-                    <div id="labelCanvas"></div>
-                </div>
-                <div class="px-3 py-1 border-top bg-light" style="font-size:10px;color:#6c757d;">
-                    <i class="bi bi-hand-index me-1"></i>Kéo thả trường để thay đổi vị trí
-                </div>
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white py-2 d-flex align-items-center gap-2">
+                <span class="fw-semibold small">
+                    <i class="bi bi-eye me-1 text-primary"></i>Preview nhãn
+                </span>
+                <span class="badge bg-light text-dark border ms-auto small" id="canvasInfo"></span>
+            </div>
+            <div id="canvasWrap">
+                <div id="labelCanvas"></div>
+            </div>
+            <div class="px-3 py-1 border-top bg-light" style="font-size:10px;color:#6c757d;">
+                <i class="bi bi-hand-index me-1"></i>Kéo thả trường để thay đổi vị trí
             </div>
         </div>
+
+    </div><!-- /editor-preview -->
+
+    <!-- ════ CỘT PHẢI: Field list + Property panel ════ -->
+    <div class="editor-inspector">
 
         <!-- Danh sách trường -->
-        <div style="flex:1;min-width:140px;">
-            <div class="card border-0 shadow-sm">
-                <div class="card-header bg-white py-2 fw-semibold small">
-                    <i class="bi bi-list-check me-1 text-primary"></i>Các trường trên tem
-                    <div class="text-muted fw-normal" style="font-size:10px;">
-                        Click để chọn &amp; cấu hình
-                    </div>
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white py-2 fw-semibold small">
+                <i class="bi bi-list-check me-1 text-primary"></i>Các trường trên tem
+                <div class="text-muted fw-normal" style="font-size:10px;">
+                    Click để chọn &amp; cấu hình
                 </div>
-                <div class="card-body p-2" id="fieldList"></div>
             </div>
+            <div class="card-body p-2" id="fieldList"></div>
         </div>
 
-    </div><!-- /editor-top-right -->
-
-    <!-- ════ CỘT PHẢI GIỮA: Property panel sát dưới canvas ════ -->
-    <div class="editor-prop-right">
         <div class="card border-0 shadow-sm" id="propPanel">
             <div class="card-header bg-primary text-white py-2 small fw-semibold">
                 <span id="propTitle">
@@ -334,7 +330,7 @@
                 </div>
             </div>
         </div>
-    </div><!-- /editor-prop-right -->
+    </div><!-- /editor-inspector -->
 
     <!-- ════ HÀNG DƯỚI FULL WIDTH: Layout tờ giấy + Bù sai số ════ -->
     <div class="editor-layout-row">
