@@ -181,6 +181,7 @@ Nếu file không tồn tại thì fallback về connection string local.
 - `.field-prefix` và `.field-colon` luôn in đậm, giữ cỡ chữ gốc của field; style co chữ/wrap không áp lên prefix.
 - Với `ten_san_pham` và `nguoi_dong_goi`, fit/truncate chỉ tác động `.field-value`. Khi value dài và wrap, dòng sau nằm trong cột value, tức canh trái sau dấu `:` thay vì quay về đầu dòng.
 - Không đổi DB/schema hoặc JSON model. `dotnet build` đã pass 0 warning/0 error.
+- Sửa bổ sung: `stt` trong `Views/PhienIn/Print.cshtml` cũng dùng cùng cơ chế prefix/value, nên bật `Hiện tên trường` cho STT sẽ in tên trường. `nguoi_dong_goi` trong editor preview chuyển từ ellipsis một dòng sang wrap value-only để khớp bản in hơn.
 
 ### 1. Race condition khi thêm/xóa chi tiết và đổi template — đã xử lý phần code
 **Vị trí**: `Services/Services.cs`, `Data/Repositories/Implementations/Repositories.cs`

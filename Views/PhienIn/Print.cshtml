@@ -141,7 +141,7 @@ body{background:#e5e5e5;font-family:Arial,sans-serif;}
               else { @lb.NguoiDongGoi }
             </span>
           }
-          @if(cfg.Stt.HienThi && !string.IsNullOrEmpty(lb.Stt)){<span style="@FieldStyle(cfg.Stt)">@lb.Stt</span>}
+          @if(cfg.Stt.HienThi && !string.IsNullOrEmpty(lb.Stt)){<span class="@FieldClass(cfg.Stt)" data-label-x-mm="@DataX(cfg.Stt)" style="@FieldStyle(cfg.Stt)">@if (ShowPrefix(cfg.Stt)) { <span class="field-prefix">@cfg.Stt.Nhan</span><span class="field-colon">:</span><span class="field-value">@lb.Stt</span> } else { @lb.Stt }</span>}
         </div>
       }
       </div>

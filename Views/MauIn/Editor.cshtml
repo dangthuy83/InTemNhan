@@ -630,10 +630,11 @@ function redraw() {
                 const target = tok.querySelector('.field-value') || tok;
                 const prefixWidth = target === tok ? 0 : Math.max(0, tok.getBoundingClientRect().width - target.getBoundingClientRect().width);
                 const maxW = Math.max(12, getTruncateMaxWidthPx() - prefixWidth);
+                target.style.width        = maxW + 'px';
                 target.style.maxWidth     = maxW + 'px';
                 target.style.overflow     = 'hidden';
-                target.style.textOverflow = 'ellipsis';
-                target.style.whiteSpace   = 'nowrap';
+                target.style.textOverflow = '';
+                target.style.whiteSpace   = 'normal';
             }
         });
     });
