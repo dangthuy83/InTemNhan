@@ -72,8 +72,8 @@
     column-gap: 2px;
     align-items: baseline;
 }
-.label-with-prefix .field-prefix { white-space: nowrap; }
-.label-with-prefix .field-colon { padding-right: 2px; }
+.label-with-prefix .field-prefix { font-weight: 700; white-space: nowrap; }
+.label-with-prefix .field-colon { font-weight: 700; padding-right: 2px; }
 .label-with-prefix .field-value { min-width: 0; white-space: nowrap; }
 
 /* ── Field rows ─────────────────────────────────── */
@@ -513,17 +513,23 @@ const IV = id => parseInt(G(id)?.value)   || 0;
 
 // ── Fit text: co font tên SP cho vừa 1 dòng ──────────────
 function fitTenSanPham(el, maxWidthPx, baseFontSizePt) {
-    el.style.fontSize = baseFontSizePt + 'pt';
-    el.style.overflow = 'visible';
+    const valueEl = el.querySelector('.field-value') || el;
+    const prefixWidth = valueEl === el ? 0 : Math.max(0, el.getBoundingClientRect().width - valueEl.getBoundingClientRect().width);
+    const valueWidth = Math.max(12, maxWidthPx - prefixWidth);
+    valueEl.style.fontSize = baseFontSizePt + 'pt';
+    valueEl.style.overflow = 'visible';
+    valueEl.style.whiteSpace = 'nowrap';
+    valueEl.style.maxWidth = '';
     let fs = baseFontSizePt;
-    while (el.scrollWidth > maxWidthPx + 2 && fs > 6) {
+    while (valueEl.scrollWidth > valueWidth + 2 && fs > 6) {
         fs -= 0.5;
-        el.style.fontSize = fs + 'pt';
+        valueEl.style.fontSize = fs + 'pt';
     }
-    if (el.scrollWidth > maxWidthPx + 2) {
-        el.style.overflow   = 'hidden';
-        el.style.textOverflow = 'ellipsis';
-        el.style.maxWidth   = maxWidthPx + 'px';
+    if (valueEl.scrollWidth > valueWidth + 2) {
+        valueEl.style.overflow   = 'hidden';
+        valueEl.style.textOverflow = 'ellipsis';
+        valueEl.style.maxWidth   = valueWidth + 'px';
+        valueEl.style.whiteSpace = 'normal';
     }
 }
 
@@ -621,11 +627,13 @@ function redraw() {
                 fitTenSanPham(tok, maxW, c.co_chu || 10);
             }
             if (f.key === TRUNCATE_FIELD_KEY && c.hien_thi) {
-                const maxW = getTruncateMaxWidthPx();
-                tok.style.maxWidth     = maxW + 'px';
-                tok.style.overflow     = 'hidden';
-                tok.style.textOverflow = 'ellipsis';
-                tok.style.whiteSpace   = 'nowrap';
+                const target = tok.querySelector('.field-value') || tok;
+                const prefixWidth = target === tok ? 0 : Math.max(0, tok.getBoundingClientRect().width - target.getBoundingClientRect().width);
+                const maxW = Math.max(12, getTruncateMaxWidthPx() - prefixWidth);
+                target.style.maxWidth     = maxW + 'px';
+                target.style.overflow     = 'hidden';
+                target.style.textOverflow = 'ellipsis';
+                target.style.whiteSpace   = 'nowrap';
             }
         });
     });

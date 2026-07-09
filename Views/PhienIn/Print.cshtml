@@ -57,8 +57,8 @@ body{background:#e5e5e5;font-family:Arial,sans-serif;}
 .print-error{display:none;flex-basis:100%;background:#fff3cd;color:#664d03;border:1px solid #ffda6a;border-radius:4px;padding:8px 10px;font-size:13px;line-height:1.35;}
 .print-error.show{display:block;}
 .label-with-prefix{display:inline-grid;grid-template-columns:var(--prefix-width-px, auto) auto auto;column-gap:2px;align-items:baseline;}
-.label-with-prefix .field-prefix{white-space:nowrap;}
-.label-with-prefix .field-colon{padding-right:2px;}
+.label-with-prefix .field-prefix{font-weight:700;white-space:nowrap;}
+.label-with-prefix .field-colon{font-weight:700;padding-right:2px;}
 .label-with-prefix .field-value{min-width:0;white-space:nowrap;}
 .pages{display:flex;flex-direction:column;align-items:center;padding:20px;gap:16px;}
 .label-page{background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.2);position:relative;overflow:hidden;
@@ -168,28 +168,40 @@ const LINE_HEIGHT_FACTOR = 1.2;
 const TOLERANCE_PX = 5; // MỚI — tăng dung sai lên 5px (~1.3mm) để tránh false-positive do sai số mm/px
 
 function fitWithBottomAnchor(el, basePt, yMm, maxWidthMm) {
+    const valueEl = el.querySelector('.field-value') || el;
+    const hasPrefix = valueEl !== el;
+
     el.style.top          = yMm + 'mm';
     el.style.fontSize     = basePt + 'pt';
     el.style.whiteSpace    = 'nowrap';
     el.style.overflow      = 'visible';
     el.style.textOverflow  = '';
+    valueEl.style.fontSize = basePt + 'pt';
+    valueEl.style.whiteSpace = 'nowrap';
+    valueEl.style.overflow = 'visible';
+    valueEl.style.textOverflow = '';
+    valueEl.style.width = '';
     el.style.width         = '';   // bỏ width cũ (nếu có từ lần fit trước) để đo lại tự nhiên
 
     const fixedWidth = maxWidthMm * PX_PER_MM;  // độ rộng khung CỐ ĐỊNH tính từ mm Razor
 
+    const prefixWidth = hasPrefix ? Math.max(0, el.getBoundingClientRect().width - valueEl.getBoundingClientRect().width) : 0;
+    const valueWidth = Math.max(12, fixedWidth - prefixWidth);
+
     let fs = basePt;
     // Bước 1: co font xuống tới WRAP_AT_PT
-    while (el.scrollWidth > fixedWidth + TOLERANCE_PX && fs > WRAP_AT_PT) {
+    while (valueEl.scrollWidth > valueWidth + TOLERANCE_PX && fs > WRAP_AT_PT) {
         fs -= 0.5;
-        el.style.fontSize = fs + 'pt';
+        valueEl.style.fontSize = fs + 'pt';
     }
 
     let isWrapped = false;
-    if (el.scrollWidth > fixedWidth + TOLERANCE_PX) {
+    if (valueEl.scrollWidth > valueWidth + TOLERANCE_PX) {
         // Vẫn tràn ở WRAP_AT_PT → cho phép wrap 2 dòng, dừng co font tại đây
         isWrapped = true;
-        el.style.whiteSpace = 'normal';
-        el.style.width      = fixedWidth + 'px';
+        valueEl.style.whiteSpace = 'normal';
+        valueEl.style.width      = valueWidth + 'px';
+        el.style.width           = fixedWidth + 'px';
     }
 
     const origHeightMm = basePt * PT_TO_MM * LINE_HEIGHT_FACTOR;
@@ -198,9 +210,9 @@ function fitWithBottomAnchor(el, basePt, yMm, maxWidthMm) {
 
     if (isWrapped) {
         // Đo chiều cao 1 dòng thực tế (px) bằng cách tạm tắt wrap để đo
-        el.style.whiteSpace = 'nowrap';
-        const singleLineHeightPx = el.offsetHeight;
-        el.style.whiteSpace = 'normal';
+        valueEl.style.whiteSpace = 'nowrap';
+        const singleLineHeightPx = valueEl.offsetHeight;
+        valueEl.style.whiteSpace = 'normal';
 
         const singleLineHeightMm = singleLineHeightPx / PX_PER_MM;
 
@@ -210,9 +222,9 @@ function fitWithBottomAnchor(el, basePt, yMm, maxWidthMm) {
         el.style.top = topKhoiMm + 'mm';
     } else {
         // Không wrap — co tiếp xuống MIN_PT nếu vẫn tràn ở WRAP_AT_PT
-        while (el.scrollWidth > fixedWidth + TOLERANCE_PX && fs > MIN_PT) {
+        while (valueEl.scrollWidth > valueWidth + TOLERANCE_PX && fs > MIN_PT) {
             fs -= 0.5;
-            el.style.fontSize = fs + 'pt';
+            valueEl.style.fontSize = fs + 'pt';
         }
         const origH = basePt * PT_TO_MM * LINE_HEIGHT_FACTOR;
         const newH  = fs    * PT_TO_MM * LINE_HEIGHT_FACTOR;
@@ -221,8 +233,10 @@ function fitWithBottomAnchor(el, basePt, yMm, maxWidthMm) {
     }
 
     el.style.width        = fixedWidth + 'px';
+    if (hasPrefix) valueEl.style.width = valueWidth + 'px';
     el.style.overflow      = 'hidden';
-    el.style.textOverflow  = isWrapped ? '' : (el.scrollWidth > fixedWidth + TOLERANCE_PX ? 'ellipsis' : '');
+    valueEl.style.overflow = 'hidden';
+    valueEl.style.textOverflow = isWrapped ? '' : (valueEl.scrollWidth > valueWidth + TOLERANCE_PX ? 'ellipsis' : '');
 }
 
 function fitAllTenSanPham() {

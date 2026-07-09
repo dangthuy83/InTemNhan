@@ -175,6 +175,13 @@ Nếu file không tồn tại thì fallback về connection string local.
 - Không áp dụng cho `ngay_san_xuat` và `stt` vì 2 field này thường có trục X riêng.
 - Thao tác chỉ thay đổi cấu hình trên editor/canvas; muốn lưu vĩnh viễn vẫn phải bấm `Lưu mẫu` như các chỉnh sửa khác. `dotnet build` đã pass 0 warning/0 error.
 
+## Cập nhật 2026-07-09 — tách style tên trường và dữ liệu khi bật `Hiện tên trường`
+
+- `Views/MauIn/Editor.cshtml` và `Views/PhienIn/Print.cshtml` giữ cấu trúc 3 phần `.field-prefix`, `.field-colon`, `.field-value`.
+- `.field-prefix` và `.field-colon` luôn in đậm, giữ cỡ chữ gốc của field; style co chữ/wrap không áp lên prefix.
+- Với `ten_san_pham` và `nguoi_dong_goi`, fit/truncate chỉ tác động `.field-value`. Khi value dài và wrap, dòng sau nằm trong cột value, tức canh trái sau dấu `:` thay vì quay về đầu dòng.
+- Không đổi DB/schema hoặc JSON model. `dotnet build` đã pass 0 warning/0 error.
+
 ### 1. Race condition khi thêm/xóa chi tiết và đổi template — đã xử lý phần code
 **Vị trí**: `Services/Services.cs`, `Data/Repositories/Implementations/Repositories.cs`
 **Mô tả cũ**: `ThemChiTietAsync`, `XoaAsync`, `CapNhatMauInAsync` có các bước đọc/ghi rời nhau, chưa gom transaction end-to-end. Trên LAN nhiều client có thể sinh trùng `Stt`, lệch `SoTrang`, hoặc cập nhật template không đồng bộ với chi tiết.
