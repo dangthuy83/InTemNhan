@@ -79,6 +79,7 @@ Serialize/deserialize qua `ToJson()` / `FromJson(string?)` — lưu vào cột `
 - Khi scale preview, phải scale đồng bộ: kích thước canvas, vị trí field, font-size preview, max-width fit/wrap, clamp top và quy đổi kéo-thả px → mm. Không dùng lại hằng số px/mm cố định cho một phần riêng lẻ.
 - Layout editor bước 1 dùng grid 3 cột: trái là danh sách/thông tin mẫu, giữa là preview, phải là danh sách field + property panel. Các `id` JS (`fieldList`, `propPanel`, `labelCanvas`, input property/layout...) phải giữ nguyên khi refactor tiếp.
 - Cập nhật 2026-07-09: `Căn X nhóm trường chính` chuyển sang panel cấu hình bên phải, chỉ còn nhập `X mới` + `Áp dụng X`; bỏ UI/function `Bước dịch`. `Bù sai số từng hàng` chuyển vào trong card `Layout tờ giấy & bù sai số`. CSS grid cho `.editor-inspector` span `grid-row: 1 / 3`, còn `.editor-layout-row` chỉ span cột trái + preview (`grid-column: 1 / 3`) để card layout không bị kéo xuống theo chiều cao panel phải.
+- Cập nhật bổ sung: để giảm khoảng trống dưới `Thông tin mẫu`, giữ preview là khung cố định nhưng giảm `#canvasWrap` xuống 260px và dùng `gap: 6px 12px` cho editor grid. Với tem 92 x 59.9mm vẫn đủ hiển thị ở scale thật; template cao hơn sẽ tự scale nhỏ trong khung preview.
 
 ---
 
