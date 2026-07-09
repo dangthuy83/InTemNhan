@@ -94,6 +94,10 @@ Truyền qua chuỗi controller → service → `MayTinhService.LayTenMay(ip)`.
 Hỗ trợ load config từ file ngoài (ShellApp shared config) qua `appsettings.json["SharedConfigPath"]`.  
 Nếu file không tồn tại thì fallback về connection string local.
 
+### Datepicker custom bị đóng khi bấm chuyển tháng
+**Vấn đề**: `createDmyDatePicker` render lại `picker.innerHTML` khi bấm prev/next tháng; event click tiếp tục bubble lên `document`, nhưng `e.target` cũ đã bị remove khỏi DOM nên check outside-click hiểu nhầm là click bên ngoài và đóng popup.  
+**Fix**: chặn propagation cho click trên input, nút mở lịch và picker trước khi xử lý prev/next/today/clear/date. Áp dụng ở `Views/LichSu/Index.cshtml` và `Views/PhienIn/Index.cshtml`.
+
 ---
 
 ## Đo lường thực tế

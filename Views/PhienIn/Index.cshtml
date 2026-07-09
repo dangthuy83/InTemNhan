@@ -375,9 +375,10 @@ function createDmyDatePicker({ inputId, hiddenId, pickerId, buttonId, onChange }
             </div>`;
     }
 
-    input.addEventListener('click', open);
-    button.addEventListener('click', toggle);
+    input.addEventListener('click', e => { e.stopPropagation(); open(); });
+    button.addEventListener('click', e => { e.stopPropagation(); toggle(); });
     picker.addEventListener('click', e => {
+        e.stopPropagation();
         const act = e.target.closest('[data-act]')?.dataset.act;
         if (act === 'prev') { viewDate = new Date(viewDate.getFullYear(), viewDate.getMonth() - 1, 1); render(); return; }
         if (act === 'next') { viewDate = new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 1); render(); return; }
