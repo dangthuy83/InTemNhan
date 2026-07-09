@@ -72,6 +72,14 @@ Serialize/deserialize qua `ToJson()` / `FromJson(string?)` — lưu vào cột `
 
 ---
 
+## Views/MauIn/Editor.cshtml — preview editor
+
+- Preview editor chỉ là khung xem/chỉnh, không dùng để quyết định kích thước in thật.
+- `labelCanvas` dùng `currentScale` động để fit vào khung preview cố định; dữ liệu layout vẫn lưu theo mm thật (`rong_nhan`, `cao_nhan`, X/Y field).
+- Khi scale preview, phải scale đồng bộ: kích thước canvas, vị trí field, font-size preview, max-width fit/wrap, clamp top và quy đổi kéo-thả px → mm. Không dùng lại hằng số px/mm cố định cho một phần riêng lẻ.
+
+---
+
 ## Views/PhienIn/Print.cshtml
 
 ### Cấu trúc HTML

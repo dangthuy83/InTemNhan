@@ -42,11 +42,14 @@
 /* ── Canvas ─────────────────────────────────────── */
 #canvasWrap {
     background: #d0d0d0;
-    padding: 12px 360px 12px 360px;
+    width: 620px;
+    height: 320px;
+    padding: 12px;
     display: flex;
     justify-content: center;
     align-items: center;
     border-radius: 0 0 6px 6px;
+    overflow: hidden;
 }
 #labelCanvas {
     background: #fff;
@@ -484,7 +487,8 @@
 
 @section Scripts {
 <script>
-const SC = 3.7795275591;
+const BASE_SC = 3.7795275591;
+let currentScale = BASE_SC;
 const TRUNCATE_FIELD_KEY = 'nguoi_dong_goi';
 const PACKER_WRAP_AT_PT = 9;
 const PACKER_WRAP_MAX_LINES = 2;
@@ -519,8 +523,15 @@ const G  = id => document.getElementById(id);
 const FV = id => parseFloat(G(id)?.value) || 0;
 const IV = id => parseInt(G(id)?.value)   || 0;
 
+function calcPreviewScale(rn, cn) {
+    const wrap = G('canvasWrap');
+    const maxW = Math.max(120, (wrap?.clientWidth || 620) - 24);
+    const maxH = Math.max(120, (wrap?.clientHeight || 320) - 24);
+    return Math.min(BASE_SC, maxW / rn, maxH / cn);
+}
+
 // ── Fit text: co font tên SP cho vừa 1 dòng ──────────────
-function fitTenSanPham(el, maxWidthPx, baseFontSizePt) {
+function fitTenSanPham(el, maxWidthPx, baseFontSizePt, minFontSizePt = 6) {
     const valueEl = el.querySelector('.field-value') || el;
     const prefixWidth = valueEl === el ? 0 : Math.max(0, el.getBoundingClientRect().width - valueEl.getBoundingClientRect().width);
     const valueWidth = Math.max(12, maxWidthPx - prefixWidth);
@@ -529,8 +540,9 @@ function fitTenSanPham(el, maxWidthPx, baseFontSizePt) {
     valueEl.style.whiteSpace = 'nowrap';
     valueEl.style.maxWidth = '';
     let fs = baseFontSizePt;
-    while (valueEl.scrollWidth > valueWidth + 2 && fs > 6) {
+    while (valueEl.scrollWidth > valueWidth + 2 && fs > minFontSizePt) {
         fs -= 0.5;
+        if (fs < minFontSizePt) fs = minFontSizePt;
         valueEl.style.fontSize = fs + 'pt';
     }
     if (valueEl.scrollWidth > valueWidth + 2) {
@@ -554,7 +566,7 @@ function getTruncateMaxWidthPx() {
         const rn = FV('rongNhan') || 91.95;
         const trRaw = parseFloat(truncateRight);
         const tr = isNaN(trRaw) ? 26 : trRaw;
-        return Math.max(10, rn - xPacker - tr) * SC;
+        return Math.max(10, rn - xPacker - tr) * currentScale;
     }
 
     const stt = configs.stt;
@@ -564,7 +576,7 @@ function getTruncateMaxWidthPx() {
     if (isNaN(xPacker) || isNaN(xStt) || xStt <= xPacker) return null;
 
     const maxMm = xStt - xPacker - 1;
-    return maxMm > 0 ? maxMm * SC : null;
+    return maxMm > 0 ? maxMm * currentScale : null;
 }
 
 function allowBreakAfterComma(valueEl) {
@@ -623,9 +635,12 @@ function redraw() {
     const rn = FV('rongNhan') || 91.95;
     const cn = FV('caoNhan')  || 59.94;
     const cv = G('labelCanvas');
-    cv.style.width  = Math.round(rn * SC) + 'px';
-    cv.style.height = Math.round(cn * SC) + 'px';
-    G('canvasInfo').textContent = `${rn} × ${cn} mm`;
+    currentScale = calcPreviewScale(rn, cn);
+    const scaleRatio = currentScale / BASE_SC;
+    cv.style.width  = Math.round(rn * currentScale) + 'px';
+    cv.style.height = Math.round(cn * currentScale) + 'px';
+    const scalePct = Math.round(currentScale / BASE_SC * 100);
+    G('canvasInfo').textContent = `${rn} × ${cn} mm · ${scalePct}%`;
     cv.innerHTML = '';
 
     FIELDS.forEach(f => {
@@ -637,9 +652,9 @@ function redraw() {
             (activeKey===f.key ? ' active'  : '');
         tok.dataset.key = f.key;
         tok.style.cssText =
-            `left:${c.x*SC}px;top:${c.y*SC}px;` +
+            `left:${c.x*currentScale}px;top:${c.y*currentScale}px;` +
             `font-family:${c.font||'Arial'},sans-serif;` +
-            `font-size:${c.co_chu||10}pt;color:${c.mau_chu||'#000'};` +
+            `font-size:${(c.co_chu||10) * scaleRatio}pt;color:${c.mau_chu||'#000'};` +
             `font-weight:${c.in_dam?'bold':'normal'};` +
             `font-style:${c.in_nghieng?'italic':'normal'};` +
             `text-align:${c.can_chinh||'left'};` +
@@ -653,8 +668,8 @@ function redraw() {
         // Apply fit/truncate sau khi append (cần DOM để đo)
         requestAnimationFrame(() => {
             if (f.key === 'ten_san_pham' && c.hien_thi) {
-                const maxW = (rn - c.x) * SC;
-                fitTenSanPham(tok, maxW, c.co_chu || 10);
+                const maxW = (rn - c.x) * currentScale;
+                fitTenSanPham(tok, maxW, (c.co_chu || 10) * scaleRatio, 6 * scaleRatio);
             }
             if (f.key === TRUNCATE_FIELD_KEY && c.hien_thi) {
                 const target = tok.querySelector('.field-value') || tok;
@@ -662,7 +677,7 @@ function redraw() {
                 if (maxWidthPx) {
                     const prefixWidth = target === tok ? 0 : Math.max(0, tok.getBoundingClientRect().width - target.getBoundingClientRect().width);
                     const maxW = Math.max(12, maxWidthPx - prefixWidth);
-                    const basePt = c.co_chu || 10;
+                    const basePt = (c.co_chu || 10) * scaleRatio;
                     target.style.fontSize = basePt + 'pt';
                     target.style.whiteSpace = 'nowrap';
                     target.style.width = '';
@@ -678,7 +693,7 @@ function redraw() {
                     target.style.overflow     = 'hidden';
                     target.style.textOverflow = '';
                     if (shouldWrap) {
-                        const wrapPt = Math.min(basePt, PACKER_WRAP_AT_PT);
+                        const wrapPt = Math.min(basePt, PACKER_WRAP_AT_PT * scaleRatio);
                         allowBreakAfterComma(target);
                         target.style.fontSize = wrapPt + 'pt';
                         target.style.whiteSpace = 'normal';
@@ -690,14 +705,14 @@ function redraw() {
                         target.style.webkitLineClamp = String(PACKER_WRAP_MAX_LINES);
                         target.style.webkitBoxOrient = 'vertical';
                         const blockHeightPx = wrapPt * 96 / 72 * PACKER_WRAP_LINE_HEIGHT * PACKER_WRAP_MAX_LINES;
-                        const maxTopPx = (cn - PACKER_WRAP_BOTTOM_SAFE_MM) * SC - blockHeightPx;
-                        tok.style.top = Math.max(0, Math.min(c.y * SC, maxTopPx)) + 'px';
+                        const maxTopPx = (cn - PACKER_WRAP_BOTTOM_SAFE_MM) * currentScale - blockHeightPx;
+                        tok.style.top = Math.max(0, Math.min(c.y * currentScale, maxTopPx)) + 'px';
                     } else {
                         target.style.whiteSpace = 'nowrap';
                         target.style.lineHeight = '';
                         target.style.overflowWrap = '';
                         target.style.wordBreak = '';
-                        tok.style.top = `${c.y*SC}px`;
+                        tok.style.top = `${c.y*currentScale}px`;
                     }
                 } else {
                     target.style.width        = '';
@@ -712,7 +727,7 @@ function redraw() {
                     target.style.display = '';
                     target.style.webkitLineClamp = '';
                     target.style.webkitBoxOrient = '';
-                    tok.style.top = `${c.y*SC}px`;
+                    tok.style.top = `${c.y*currentScale}px`;
                 }
             }
         });
@@ -731,8 +746,8 @@ function onDragStart(e) {
 document.addEventListener('mousemove', e => {
     if (!dragKey) return;
     const r = G('labelCanvas').getBoundingClientRect();
-    configs[dragKey].x = Math.max(0, Math.round((e.clientX-r.left-dragOX)/SC*10)/10);
-    configs[dragKey].y = Math.max(0, Math.round((e.clientY-r.top -dragOY)/SC*10)/10);
+    configs[dragKey].x = Math.max(0, Math.round((e.clientX-r.left-dragOX)/currentScale*10)/10);
+    configs[dragKey].y = Math.max(0, Math.round((e.clientY-r.top -dragOY)/currentScale*10)/10);
     redraw(); if (activeKey===dragKey) syncP();
 });
 document.addEventListener('mouseup', () => {
