@@ -110,6 +110,12 @@
 #propPanel { opacity: .45; pointer-events: none; transition: opacity .2s; }
 #propPanel.active { opacity: 1; pointer-events: all; }
 #propPanel .card-body { max-height: 430px; overflow-y: auto; }
+.layout-tools-grid {
+    display: grid;
+    grid-template-columns: minmax(260px, 330px) 1fr;
+    gap: 16px;
+}
+.gap-vung-item { width: 78px; }
 
 /* ── Truncate extra field (ẩn mặc định) ────────── */
 /*#pTruncateWrap { display: none; }
@@ -341,26 +347,6 @@
                 </div>
             </div>
         </div>
-        <div class="card border-0 shadow-sm">
-            <div class="card-header bg-white py-2 fw-semibold small">
-                <i class="bi bi-arrows me-1 text-primary"></i>Căn X nhóm trường chính
-            </div>
-            <div class="card-body py-2">
-                <div class="d-flex align-items-end gap-2">
-                    <div>
-                        <label class="form-label form-label-sm mb-1">X mới (mm)</label>
-                        <input type="number" id="bulkX" class="form-control form-control-sm"
-                               style="width:100px" step="0.1" />
-                    </div>
-                    <button type="button" class="btn btn-outline-primary btn-sm" onclick="applyBulkX()">
-                        <i class="bi bi-check2 me-1"></i>Áp dụng X
-                    </button>
-                </div>
-                <div class="text-muted mt-1" style="font-size:10px;">
-                    Áp dụng cho nhóm trường chính, không áp dụng cho Ngày SX và STT.
-                </div>
-            </div>
-        </div>
     </div><!-- /editor-inspector -->
 
     <!-- ════ HÀNG DƯỚI TRÁI + GIỮA: Layout tờ giấy + Bù sai số ════ -->
@@ -442,31 +428,70 @@
                                            onchange="fillGapDefaults()" />
                                 </div>
                             </div>
-                            <div class="border-top mt-2 pt-2">
-                                <div class="text-muted mb-1" style="font-size:11px;font-weight:600;">
-                                    Bù sai số từng hàng (mm)
-                                    <span style="font-weight:normal;color:#adb5bd;">
-                                        (âm = lệch lên, dương = lệch xuống)
-                                    </span>
-                                </div>
-                                <div id="gapVungContainer" class="d-flex flex-wrap gap-2">
-                                    @for (int gi = 0; gi < numGaps; gi++) {
-                                        double gv = (layout.GapDocVung != null && gi < layout.GapDocVung.Count)
-                                                    ? layout.GapDocVung[gi] : layout.KhoangCachDoc;
-                                        <div class="d-flex align-items-center gap-1">
-                                            <span style="font-size:11px;min-width:70px;color:#495057;">
-                                                Hàng @(gi+1)–@(gi+2):
-                                            </span>
-                                            <input type="number"
-                                                   class="form-control form-control-sm gap-vung-input"
-                                                   data-index="@gi" value="@gv.ToString("F1")"
-                                                   step="0.1" style="max-width:70px" />
-                                            <span style="font-size:10px;color:#adb5bd">mm</span>
+                            <div class="border-top mt-2 pt-2 layout-tools-grid">
+                                <div>
+                                    <div class="text-muted mb-2" style="font-size:11px;font-weight:600;">
+                                        Căn nhóm trường
+                                    </div>
+                                    <div class="d-flex flex-wrap align-items-end gap-2">
+                                        <div>
+                                            <label class="form-label form-label-sm mb-1">X nhóm chính (mm)</label>
+                                            <input type="number" id="bulkX" class="form-control form-control-sm"
+                                                   style="width:100px" step="0.1" />
                                         </div>
-                                    }
+                                        <button type="button" class="btn btn-outline-primary btn-sm" onclick="applyBulkX()">
+                                            <i class="bi bi-check2 me-1"></i>Áp dụng X
+                                        </button>
+                                    </div>
+                                    <div class="d-flex flex-wrap align-items-end gap-2 mt-2">
+                                        <div>
+                                            <label class="form-label form-label-sm mb-1">Bước dịch Y (mm)</label>
+                                            <input type="number" id="bulkYStep" class="form-control form-control-sm"
+                                                   style="width:100px" value="0.1" min="0.1" step="0.1" />
+                                        </div>
+                                        <div class="btn-group btn-group-sm">
+                                            <button type="button" class="btn btn-outline-secondary" onclick="shiftAllY(-1)"
+                                                    title="Dịch toàn bộ trường lên">
+                                                <i class="bi bi-arrow-up"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-outline-secondary" onclick="shiftAllY(1)"
+                                                    title="Dịch toàn bộ trường xuống">
+                                                <i class="bi bi-arrow-down"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="text-muted mt-1" style="font-size:10px;">
+                                        X áp dụng nhóm chính, không áp dụng Ngày SX/STT. Y dịch toàn bộ các trường.
+                                    </div>
                                 </div>
-                                <div id="gapVungNote" class="mt-1" style="font-size:10px;color:#adb5bd;">
-                                    <i class="bi bi-info-circle me-1"></i>@numGaps vùng cho @layout.SoHang hàng
+                                <div>
+                                    <div class="text-muted mb-1" style="font-size:11px;font-weight:600;">
+                                        Bù sai số từng hàng (mm)
+                                        <span style="font-weight:normal;color:#adb5bd;">
+                                            (âm = lệch lên, dương = lệch xuống)
+                                        </span>
+                                    </div>
+                                    <div id="gapVungContainer" class="d-flex flex-wrap gap-2">
+                                        @for (int gi = 0; gi < numGaps; gi++) {
+                                            double gv = (layout.GapDocVung != null && gi < layout.GapDocVung.Count)
+                                                        ? layout.GapDocVung[gi] : layout.KhoangCachDoc;
+                                            <div class="gap-vung-item">
+                                                <label class="form-label form-label-sm mb-1">
+                                                    Hàng @(gi+1)–@(gi+2)
+                                                </label>
+                                                <div class="d-flex align-items-center gap-1">
+                                                    <input type="number"
+                                                           class="form-control form-control-sm gap-vung-input"
+                                                           data-index="@gi" value="@gv.ToString("F1")"
+                                                           step="0.1" style="max-width:70px" />
+                                                    <span style="font-size:10px;color:#adb5bd">mm</span>
+                                                </div>
+                                            </div>
+                                        }
+                                    </div>
+                                    <div id="gapVungNote" class="mt-1" style="font-size:10px;color:#adb5bd;">
+                                        <i class="bi bi-info-circle me-1"></i>@numGaps vùng cho @layout.SoHang hàng
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -854,6 +879,21 @@ function applyBulkX() {
     redraw();
 }
 
+function shiftAllY(direction) {
+    const stepRaw = parseFloat(G('bulkYStep')?.value);
+    const step = isNaN(stepRaw) ? 0.1 : Math.max(0.1, Math.abs(stepRaw));
+
+    Object.keys(configs).forEach(key => {
+        const c = configs[key];
+        if (!c) return;
+        const current = parseFloat(c.y);
+        c.y = normalizeMm(Math.max(0, (isNaN(current) ? 0 : current) + direction * step));
+    });
+
+    if (activeKey) syncP();
+    redraw();
+}
+
 function onSoHangChange() { rebuildGapVung(); redraw(); }
 
 function rebuildGapVung() {
@@ -864,13 +904,15 @@ function rebuildGapVung() {
     const el = G('gapVungContainer'); el.innerHTML='';
     for (let i=0;i<n;i++){
         const row=document.createElement('div');
-        row.className='d-flex align-items-center gap-1';
+        row.className='gap-vung-item';
         row.innerHTML=`
-            <span style="font-size:11px;min-width:70px;color:#495057;">Hàng ${i+1}–${i+2}:</span>
-            <input type="number" class="form-control form-control-sm gap-vung-input"
-                   data-index="${i}" value="${(old[i]??d).toFixed(1)}"
-                   step="0.1" style="max-width:70px"/>
-            <span style="font-size:10px;color:#adb5bd">mm</span>`;
+            <label class="form-label form-label-sm mb-1">Hàng ${i+1}–${i+2}</label>
+            <div class="d-flex align-items-center gap-1">
+                <input type="number" class="form-control form-control-sm gap-vung-input"
+                       data-index="${i}" value="${(old[i]??d).toFixed(1)}"
+                       step="0.1" style="max-width:70px"/>
+                <span style="font-size:10px;color:#adb5bd">mm</span>
+            </div>`;
         el.appendChild(row);
     }
     const note=G('gapVungNote');
