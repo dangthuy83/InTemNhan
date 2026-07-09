@@ -419,6 +419,20 @@ G('nguoiDongGoi').addEventListener('blur', function () {
     this.value = normalizeNguoiDongGoi(this.value);
 });
 
+function roundUpToPage(value) {
+    const n = parseInt(value) || 0;
+    if (n <= 0 || soNhanMoiTrang <= 0) return n;
+    return Math.ceil(n / soNhanMoiTrang) * soNhanMoiTrang;
+}
+
+function normalizeSoLuongNhan() {
+    const rounded = roundUpToPage(G('soLuongNhan')?.value);
+    if (rounded > 0) SV('soLuongNhan', rounded);
+    return rounded;
+}
+
+G('soLuongNhan').addEventListener('blur', normalizeSoLuongNhan);
+
 // Auto-fill mã code khi chọn tên SP
 G('tenSanPham').addEventListener('input', function () {
     const c = spMap[this.value];
@@ -487,8 +501,7 @@ function tinhSoLuongNhan() {
     const sp  = parseFloat(G('soLuongSp')?.value)  || 0;
     if (psp <= 0 || sp <= 0) return;
     const raw   = Math.ceil(psp / sp);
-    const final = Math.ceil(raw / soNhanMoiTrang) * soNhanMoiTrang;
-    SV('soLuongNhan', final);
+    SV('soLuongNhan', roundUpToPage(raw));
 }
 G('soLuongPSP').addEventListener('input', tinhSoLuongNhan);
 G('soLuongSp').addEventListener('input',  tinhSoLuongNhan);
@@ -514,6 +527,7 @@ G('btnThem').addEventListener('click', async () => {
     }
     const ngayIso = V('ngaySanXuatIso') || null;
     const nguoiDongGoi = normalizeNguoiDongGoi(G('nguoiDongGoi')?.value);
+    normalizeSoLuongNhan();
     SV('nguoiDongGoi', nguoiDongGoi);
     const req = {
         maPhien: MP, loaiTao: CP ? 'copy' : 'moi', maLichSuGoc: CP?.maLichSuGoc || null,

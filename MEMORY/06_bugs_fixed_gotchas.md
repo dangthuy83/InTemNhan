@@ -21,6 +21,7 @@
 ### 5. ExpandLabels STT toàn cục
 **Vấn đề**: STT từ 1 cho từng sản phẩm riêng, không liên tục  
 **Fix**: STT toàn cục 1→N, sort theo `pageKey = (idx % soTrang) + 1`
+**Cập nhật 2026-07-09**: `pageKey` cũ chỉ đúng khi tổng tem chia hết cho số nhãn/trang; nếu tờ cuối thiếu tem thì tem bị dồn sai slot. `PrintService` đã đổi sang thuật toán chồng slot và chèn `LabelItem.LaTrong` cho ô thiếu, để cắt cả tập tem rồi xếp chồng vẫn ra STT 1→N. Tạo mới hiện làm tròn `so_luong_nhan` lên đủ trang trong `ChiTietRepository.ThemAsync`; in lại lịch sử giữ số lượng cũ và dùng ô trống nếu thiếu.
 
 ### 6. currentMauIn hardcode Razor
 **Vấn đề**: Sau đổi template, biến Razor vẫn giữ giá trị cũ → không đổi ngược lại được  

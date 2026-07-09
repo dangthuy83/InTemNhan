@@ -6,7 +6,7 @@
     var pageSize      = Model.MauIn.KhoGiay == "a4" ? "210mm 297mm" : "215.9mm 279.4mm";
     var pageSizeLabel = Model.MauIn.KhoGiay == "a4" ? "A4" : "Letter";
     var tenMau        = Model.MauIn.TenMau;
-    var tongNhan      = Model.Labels.Count;
+    var tongNhan      = Model.Labels.Count(x => !x.LaTrong);
     var laInLai       = Model.LaInLai;
     var maPhien       = Model.MaPhien;
     var maLichSu      = Model.MaLichSu;
@@ -102,7 +102,7 @@ body{background:#e5e5e5;font-family:Arial,sans-serif;}
   int perPage = Math.Max(1, Model.MauIn.SoNhanMoiTrang);
   int total   = Model.Labels.Count;
 
-  if (total == 0)
+  if (tongNhan == 0)
   {
     <div class="no-labels" style="margin:40px auto;max-width:400px;">
       <div style="font-size:2rem;margin-bottom:8px;">⚠️</div>
@@ -125,6 +125,8 @@ body{background:#e5e5e5;font-family:Arial,sans-serif;}
         var left = layout.LeTrai + col * (layout.RongNhan + layout.KhoangCachNgang);
         var top  = TopMm(row);
         <div class="label-cell" style="left:@(left)mm;top:@(top)mm;">
+          @if (!lb.LaTrong)
+          {
           @if(cfg.TenSanPham.HienThi){
             <span class="@FieldClass(cfg.TenSanPham, "fit-ten-sp")" data-label-x-mm="@DataX(cfg.TenSanPham)" data-base-pt="@cfg.TenSanPham.CoChu" data-y-mm="@cfg.TenSanPham.Y"
                   data-max-width-mm="@TenSpMaxWidthMm(cfg.TenSanPham).ToString("F2")"
@@ -154,6 +156,7 @@ body{background:#e5e5e5;font-family:Arial,sans-serif;}
             </span>
           }
           @if(cfg.Stt.HienThi && !string.IsNullOrEmpty(lb.Stt)){<span class="@FieldClass(cfg.Stt)" data-label-x-mm="@DataX(cfg.Stt)" style="@FieldStyle(cfg.Stt)">@if (ShowPrefix(cfg.Stt)) { <span class="field-prefix">@cfg.Stt.Nhan</span><span class="field-colon">:</span><span class="field-value">@lb.Stt</span> } else { @lb.Stt }</span>}
+          }
         </div>
       }
       </div>

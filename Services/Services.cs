@@ -399,6 +399,35 @@ public class MauInService(IMauInRepository repo) : IMauInService
 // ── PrintService ───────────────────────────────────────────
 public class PrintService : IPrintService
 {
+    private static List<LabelItem> SapXepTheoChongSlot(List<LabelItem> labels, int soNhan)
+    {
+        if (soNhan <= 0) throw new InvalidOperationException("Template có số nhãn mỗi trang không hợp lệ.");
+        if (labels.Count == 0) return labels;
+
+        var result = new List<LabelItem>();
+        var baseCount = labels.Count / soNhan;
+        var extra = labels.Count % soNhan;
+        var pages = (int)Math.Ceiling((double)labels.Count / soNhan);
+        var cursor = 0;
+        var stacks = new List<List<LabelItem>>();
+
+        for (var slot = 0; slot < soNhan; slot++)
+        {
+            var take = baseCount + (slot < extra ? 1 : 0);
+            stacks.Add(labels.Skip(cursor).Take(take).ToList());
+            cursor += take;
+        }
+
+        for (var page = 0; page < pages; page++)
+        {
+            for (var slot = 0; slot < soNhan; slot++)
+            {
+                result.Add(page < stacks[slot].Count ? stacks[slot][page] : new LabelItem { LaTrong = true });
+            }
+        }
+
+        return result;
+    }
     
     public List<LabelItem> ExpandLabels(List<ChiTietInTem> ds, int soNhan)
     {
@@ -420,35 +449,22 @@ public class PrintService : IPrintService
                 });
         }
 
-        // Bước 2: Tính page key cho từng nhãn (lặp lại 1→soNhan)
-        // VD: 20 nhãn, 8/trang → page key = 1,2,3,1,2,3,...
-        if (result.Count == 0) return result;
-
-        int tongNhan  = result.Count;
-        int soTrang   = (int)Math.Ceiling((double)tongNhan / soNhan);
-
-        // Gán page key: nhãn thứ i thuộc trang (i % soTrang) + 1
-        var indexed = result
-            .Select((item, idx) => new { item, pageKey = (idx % soTrang) + 1 })
-            .OrderBy(x => x.pageKey)
-            .ThenBy(x => int.Parse(x.item.Stt))
-            .Select(x => x.item)
-            .ToList();
-
-        return indexed;
+        return SapXepTheoChongSlot(result, soNhan);
     }
    
     public List<LabelItem> ExpandFromLichSu(LichSuInTem ls, int soNhan)
     {
         var ngay  = ls.NgaySanXuat?.ToString("dd/MM/yyyy") ?? "";
         var count = Math.Max(1, ls.SoLuongNhan);
-        return Enumerable.Range(1, count).Select(i => new LabelItem {
+        var result = Enumerable.Range(1, count).Select(i => new LabelItem {
             TenSanPham=ls.TenSanPham, MaCode=ls.MaCode, PhieuSanPham=ls.PhieuSanPham,
             TenLoaiGiay=ls.TenLoaiGiay, SoLuong=ls.SoLuongSanPham.ToString(),
             TenCa=ls.TenCa??"", NgaySanXuat=ngay,
             NguoiKiem=ls.NguoiKiem??"", NguoiDongGoi=ls.NguoiDongGoi??"",
             Stt=i.ToString()   // ← 1, 2, 3 ... N
         }).ToList();
+
+        return SapXepTheoChongSlot(result, soNhan);
     }
 }
     // ── MayTinhService ─────────────────────────────────────────

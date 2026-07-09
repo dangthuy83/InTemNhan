@@ -102,6 +102,7 @@ public class LabelItem
     public string NguoiKiem    { get; set; } = "";
     public string NguoiDongGoi { get; set; } = "";
     public string Stt          { get; set; } = "";
+    public bool   LaTrong      { get; set; }
 }
 
 public class MauInEditorVM

@@ -57,14 +57,18 @@ Serialize/deserialize qua `ToJson()` / `FromJson(string?)` — lưu vào cột `
 
 ### ExpandLabels — cho in mới (nhiều sản phẩm)
 1. Expand tất cả chi tiết → LabelItem list, **STT toàn cục 1→N**
-2. Tính `soTrang = CEIL(tongNhan / soNhan)`
-3. Sort: `pageKey = (idx % soTrang) + 1` → `OrderBy pageKey, ThenBy STT`
+2. Sắp theo chồng slot: chia danh sách STT liên tục thành `soNhan` chồng theo từng vị trí trên tờ.
+3. Render từng lớp/tờ từ các chồng slot; nếu dữ liệu không đủ slot ở tờ cuối thì chèn `LabelItem.LaTrong=true` để giữ vị trí trống, không dồn tem sang slot khác.
 
-> Kết quả: nhãn cùng vị trí slot trên tất cả trang in liên tiếp, đúng thứ tự tờ.
+> Kết quả: sau khi cắt cả tập tem theo slot và xếp chồng, STT đi đúng 1→N kể cả khi tổng tem không chia hết cho số nhãn/trang.
 
 ### ExpandFromLichSu — cho in lại (1 sản phẩm từ lịch sử)
 - `Enumerable.Range(1, Math.Max(1, soLuongNhan))` — guard tránh count=0
-- STT 1→N đơn giản
+- STT 1→N rồi dùng cùng thuật toán chồng slot như in mới; lịch sử không bị sửa số lượng, phần thiếu ở tờ cuối là ô trống.
+
+### Số lượng tem khi tạo mới
+- Khi thêm dòng mới, `so_luong_nhan` được làm tròn lên bội số của `mau_in.so_nhan_moi_trang` ngay trong `ChiTietRepository.ThemAsync` transaction. Lịch sử sau khi chốt in sẽ lưu đúng số đã làm tròn.
+- Client `/PhienIn/Index` cũng làm tròn khi user nhập trực tiếp `Số lượng tem cần in` hoặc khi tính từ PSP, nhưng server/repository vẫn là lớp bảo vệ cuối.
 
 ---
 

@@ -140,6 +140,8 @@ public class ChiTietRepository(IDbConnectionFactory db) : IChiTietRepository
             if (row.SoNhanMoiTrang <= 0) throw new InvalidOperationException("Template có số nhãn mỗi trang không hợp lệ.");
             if (ct.SoLuongNhan <= 0) throw new InvalidOperationException("Số lượng nhãn phải lớn hơn 0.");
 
+            ct.SoLuongNhan = (int)Math.Ceiling((double)ct.SoLuongNhan / row.SoNhanMoiTrang) * row.SoNhanMoiTrang;
+
             ct.Stt = await conn.ExecuteScalarAsync<int>(
                 "SELECT COALESCE(MAX(stt),0)+1 FROM chi_tiet_in_tem WHERE ma_phien=@MaPhien",
                 ct, transaction: tx);
