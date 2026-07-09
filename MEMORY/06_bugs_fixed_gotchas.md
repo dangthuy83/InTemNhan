@@ -197,6 +197,12 @@ Nếu file không tồn tại thì fallback về connection string local.
 - `Views/MauIn/Editor.cshtml`: preview `Người đóng gói` dùng logic gần bản in hơn, clamp tối đa 2 dòng ở 9pt và tránh vượt đáy nhãn. Nhãn cấu hình đổi từ `Giới hạn wrap` sang `Vùng cấm bên phải`; tăng giá trị này nghĩa là vùng chữ còn lại hẹp hơn. Đồng thời sửa bug `parseFloat(value) || 26` để giá trị 0 không bị đổi về mặc định 26.
 - Sửa bổ sung: riêng `Người đóng gói` dùng tolerance 1px thay vì 5px vì trường này sát vùng phôi/STT, và ép nhánh không hiện tên trường thành `inline-block` để `width/overflow:hidden` thực sự chặn chữ. Nếu dùng tolerance chung 5px, case như `Quang, Quý, Hải` có thể bị coi là vừa, không wrap nhưng vẫn mất/đè ký tự ở mép phải.
 
+## Quyết định 2026-07-09 — in lại lịch sử và template
+
+- `Người đóng gói`/wrap đã được user test trước khi chỉnh layout editor; hiện chưa cần mở thêm hạng mục sửa riêng nếu không phát sinh case thực tế mới.
+- Chi tiết từng lần in lại (ngày giờ/máy/người thao tác cho mỗi lần reprint) tạm thời chưa làm. Hiện hệ thống chỉ ghi `so_lan_in_lai`; nếu sau này cần truy vết chi tiết thì phải thiết kế bổ sung log riêng và xin xác nhận DB/schema trước.
+- Không lưu snapshot template vào lịch sử in. Quyết định nghiệp vụ: nếu template/phôi in sẵn thay đổi thì in lại từ lịch sử cũng phải dùng template hiện tại theo `ma_mau_in` để khớp phôi mới. Chỉ fallback template mặc định khi lịch sử không có `ma_mau_in` hoặc template gốc đã bị xóa như cơ chế hiện tại.
+
 ### 1. Race condition khi thêm/xóa chi tiết và đổi template — đã xử lý phần code
 **Vị trí**: `Services/Services.cs`, `Data/Repositories/Implementations/Repositories.cs`
 **Mô tả cũ**: `ThemChiTietAsync`, `XoaAsync`, `CapNhatMauInAsync` có các bước đọc/ghi rời nhau, chưa gom transaction end-to-end. Trên LAN nhiều client có thể sinh trùng `Stt`, lệch `SoTrang`, hoặc cập nhật template không đồng bộ với chi tiết.
