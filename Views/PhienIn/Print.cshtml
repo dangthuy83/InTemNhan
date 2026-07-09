@@ -177,6 +177,7 @@ const MIN_PT        = 6;     // pt nhỏ nhất khi không wrap
 const WRAP_MAX_LINES = 2;
 const WRAP_LINE_HEIGHT_FACTOR = 1.1;
 const WRAP_BOTTOM_SAFE_MM = 0.5;
+const PACKER_TOLERANCE_PX = 1;
 const PX_PER_MM      = 96 / 25.4;
 const PT_TO_MM        = 0.3528;
 const LINE_HEIGHT_FACTOR = 1.2;
@@ -187,7 +188,7 @@ function allowBreakAfterComma(valueEl) {
     if (raw.includes(',')) valueEl.textContent = raw.replace(/,\s*/g, ',\u200B ');
 }
 
-function fitWithBottomAnchor(el, basePt, yMm, maxWidthMm, labelHeightMm = null) {
+function fitWithBottomAnchor(el, basePt, yMm, maxWidthMm, labelHeightMm = null, tolerancePx = TOLERANCE_PX) {
     const valueEl = el.querySelector('.field-value') || el;
     const hasPrefix = valueEl !== el;
 
@@ -209,6 +210,7 @@ function fitWithBottomAnchor(el, basePt, yMm, maxWidthMm, labelHeightMm = null) 
     valueEl.style.webkitLineClamp = '';
     valueEl.style.webkitBoxOrient = '';
     el.style.width         = '';   // bỏ width cũ (nếu có từ lần fit trước) để đo lại tự nhiên
+    if (!hasPrefix) el.style.display = 'inline-block';
 
     const fixedWidth = maxWidthMm * PX_PER_MM;  // độ rộng khung CỐ ĐỊNH tính từ mm Razor
 
@@ -217,13 +219,13 @@ function fitWithBottomAnchor(el, basePt, yMm, maxWidthMm, labelHeightMm = null) 
 
     let fs = basePt;
     // Bước 1: co font xuống tới WRAP_AT_PT
-    while (valueEl.scrollWidth > valueWidth + TOLERANCE_PX && fs > WRAP_AT_PT) {
+    while (valueEl.scrollWidth > valueWidth + tolerancePx && fs > WRAP_AT_PT) {
         fs -= 0.5;
         valueEl.style.fontSize = fs + 'pt';
     }
 
     let isWrapped = false;
-    if (valueEl.scrollWidth > valueWidth + TOLERANCE_PX) {
+    if (valueEl.scrollWidth > valueWidth + tolerancePx) {
         // Vẫn tràn ở WRAP_AT_PT → cho phép wrap 2 dòng, dừng co font tại đây
         isWrapped = true;
         fs = Math.min(fs, WRAP_AT_PT);
@@ -265,7 +267,7 @@ function fitWithBottomAnchor(el, basePt, yMm, maxWidthMm, labelHeightMm = null) 
         el.style.top = topKhoiMm + 'mm';
     } else {
         // Không wrap — co tiếp xuống MIN_PT nếu vẫn tràn ở WRAP_AT_PT
-        while (valueEl.scrollWidth > valueWidth + TOLERANCE_PX && fs > MIN_PT) {
+        while (valueEl.scrollWidth > valueWidth + tolerancePx && fs > MIN_PT) {
             fs -= 0.5;
             valueEl.style.fontSize = fs + 'pt';
         }
@@ -279,7 +281,7 @@ function fitWithBottomAnchor(el, basePt, yMm, maxWidthMm, labelHeightMm = null) 
     if (hasPrefix) valueEl.style.width = valueWidth + 'px';
     el.style.overflow      = 'hidden';
     valueEl.style.overflow = 'hidden';
-    valueEl.style.textOverflow = isWrapped ? '' : (valueEl.scrollWidth > valueWidth + TOLERANCE_PX ? 'ellipsis' : '');
+    valueEl.style.textOverflow = isWrapped ? '' : (valueEl.scrollWidth > valueWidth + tolerancePx ? 'ellipsis' : '');
 }
 
 function fitAllTenSanPham() {
@@ -298,7 +300,7 @@ function fitAllNguoiDongGoi() {
         const maxWidthMm = parseFloat(el.dataset.maxWidthMm);
         const labelHeightMm = parseFloat(el.dataset.labelHeightMm);
         if (isNaN(maxWidthMm) || maxWidthMm <= 0) return;
-        fitWithBottomAnchor(el, basePt, yMm, maxWidthMm, labelHeightMm);
+        fitWithBottomAnchor(el, basePt, yMm, maxWidthMm, labelHeightMm, PACKER_TOLERANCE_PX);
     });
 }
 

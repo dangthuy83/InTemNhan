@@ -490,6 +490,7 @@ const PACKER_WRAP_AT_PT = 9;
 const PACKER_WRAP_MAX_LINES = 2;
 const PACKER_WRAP_LINE_HEIGHT = 1.1;
 const PACKER_WRAP_BOTTOM_SAFE_MM = 0.5;
+const PACKER_TOLERANCE_PX = 1;
 const MAIN_X_FIELD_KEYS = [
     'ten_san_pham',
     'ma_code',
@@ -670,7 +671,8 @@ function redraw() {
                     target.style.display = '';
                     target.style.webkitLineClamp = '';
                     target.style.webkitBoxOrient = '';
-                    const shouldWrap = target.scrollWidth > maxW + 2;
+                    if (target === tok) target.style.display = 'inline-block';
+                    const shouldWrap = target.scrollWidth > maxW + PACKER_TOLERANCE_PX;
                     target.style.width        = maxW + 'px';
                     target.style.maxWidth     = maxW + 'px';
                     target.style.overflow     = 'hidden';

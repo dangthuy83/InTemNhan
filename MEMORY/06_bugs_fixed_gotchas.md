@@ -190,6 +190,7 @@ Nếu file không tồn tại thì fallback về connection string local.
 - `PhienInService.ThemChiTietAsync` chuẩn hóa lại `NguoiDongGoi` trước khi lưu để dữ liệu mới sạch cả khi client bị bỏ qua.
 - `Views/PhienIn/Print.cshtml`: wrap `Người đóng gói` vẫn giữ 9pt, tối đa 2 dòng, line-height cố định 1.1, có safety đáy 0.5mm để tránh bị cắt khi field nằm sát đáy nhãn. Khi chuỗi cũ có dấu phẩy nhưng thiếu khoảng trắng, bản in thêm điểm ngắt sau dấu phẩy và fallback `overflow-wrap:anywhere` nếu vẫn quá dài.
 - `Views/MauIn/Editor.cshtml`: preview `Người đóng gói` dùng logic gần bản in hơn, clamp tối đa 2 dòng ở 9pt và tránh vượt đáy nhãn. Nhãn cấu hình đổi từ `Giới hạn wrap` sang `Vùng cấm bên phải`; tăng giá trị này nghĩa là vùng chữ còn lại hẹp hơn. Đồng thời sửa bug `parseFloat(value) || 26` để giá trị 0 không bị đổi về mặc định 26.
+- Sửa bổ sung: riêng `Người đóng gói` dùng tolerance 1px thay vì 5px vì trường này sát vùng phôi/STT, và ép nhánh không hiện tên trường thành `inline-block` để `width/overflow:hidden` thực sự chặn chữ. Nếu dùng tolerance chung 5px, case như `Quang, Quý, Hải` có thể bị coi là vừa, không wrap nhưng vẫn mất/đè ký tự ở mép phải.
 
 ### 1. Race condition khi thêm/xóa chi tiết và đổi template — đã xử lý phần code
 **Vị trí**: `Services/Services.cs`, `Data/Repositories/Implementations/Repositories.cs`
