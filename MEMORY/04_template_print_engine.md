@@ -81,6 +81,7 @@ Serialize/deserialize qua `ToJson()` / `FromJson(string?)` — lưu vào cột `
 - Cập nhật 2026-07-09: `Căn X nhóm trường chính` chuyển sang panel cấu hình bên phải, chỉ còn nhập `X mới` + `Áp dụng X`; bỏ UI/function `Bước dịch`. `Bù sai số từng hàng` chuyển vào trong card `Layout tờ giấy & bù sai số`; `.editor-layout-row` span cột trái + preview (`grid-column: 1 / 3`) để cạnh phải thẳng với preview.
 - Cập nhật bổ sung: để giảm khoảng trống dưới `Thông tin mẫu`, editor grid chính chỉ tính 2 cột trái + preview; panel phải `.editor-inspector` đặt absolute ở cạnh phải để không làm cao grid row. `.editor-preview` stretch theo chiều cao cột trái, `#canvasWrap` dùng `min-height: 260px` + `flex: 1` để đáy preview bằng đáy `Thông tin mẫu`, còn `Layout tờ giấy & bù sai số` bắt đầu ngay dưới với `gap: 6px 12px`.
 - Cập nhật bổ sung: `Căn X nhóm trường chính` chuyển tiếp vào cùng panel `Layout tờ giấy & bù sai số` để cột phải ngắn hơn. Panel này có thêm `Dịch Y toàn bộ` với bước mặc định 0.1mm, áp dụng cho tất cả field kể cả `ngay_san_xuat`, `stt` và field đang ẩn; thao tác chỉ đổi `configs[*].y` trên editor, muốn lưu vĩnh viễn vẫn bấm `Lưu mẫu`. Nhãn `Bù sai số từng hàng` được đặt phía trên từng ô giá trị.
+- Bố cục panel layout: `Bù sai số từng hàng` nằm bên trái; cụm `X nhóm chính`, `Áp dụng X`, `Bước dịch Y` và nút lên/xuống nằm bên phải trên cùng một hàng khi đủ rộng để tránh làm panel cao.
 
 ---
 
