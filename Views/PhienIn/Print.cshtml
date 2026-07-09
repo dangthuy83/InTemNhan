@@ -28,6 +28,9 @@
     string NguoiDongGoiStyle(CauHinhTruong f) => FieldStyle(f);
     double? NguoiDongGoiMaxWidthMm(CauHinhTruong f)
     {
+        if (!ShowPrefix(f))
+            return Math.Max(10, layout.RongNhan - f.X - cfg.NguoiDongGoiTruncateRightMm);
+
         if (!cfg.Stt.HienThi || cfg.Stt.X <= f.X) return null;
         var maxWidth = cfg.Stt.X - f.X - 1;
         return maxWidth > 0 ? maxWidth : null;

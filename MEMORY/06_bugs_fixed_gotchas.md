@@ -182,7 +182,7 @@ Nếu file không tồn tại thì fallback về connection string local.
 - Với `ten_san_pham` và `nguoi_dong_goi`, fit/truncate chỉ tác động `.field-value`. Khi value dài và wrap, dòng sau nằm trong cột value, tức canh trái sau dấu `:` thay vì quay về đầu dòng.
 - Không đổi DB/schema hoặc JSON model. `dotnet build` đã pass 0 warning/0 error.
 - Sửa bổ sung: `stt` trong `Views/PhienIn/Print.cshtml` cũng dùng cùng cơ chế prefix/value, nên bật `Hiện tên trường` cho STT sẽ in tên trường. `nguoi_dong_goi` trong editor preview chuyển từ ellipsis một dòng sang wrap value-only để khớp bản in hơn.
-- Sửa bổ sung wrap `nguoi_dong_goi`: giới hạn wrap lấy theo X của `stt` đang hiển thị, chừa an toàn 1mm trước STT. Nếu không có STT, STT bị ẩn, hoặc X STT không hợp lệ/không nằm bên phải `nguoi_dong_goi` thì không ép wrap. Tham số JSON cũ `nguoi_dong_goi_truncate_right_mm` vẫn được giữ để tương thích nhưng editor không còn dùng làm biên wrap chính.
+- Sửa bổ sung wrap `nguoi_dong_goi`: nếu field này có `Hiện tên trường` và nhãn không rỗng thì giới hạn wrap lấy theo X của `stt` đang hiển thị, chừa an toàn 1mm trước STT; nếu không có STT, STT bị ẩn, hoặc X STT không hợp lệ/không nằm bên phải `nguoi_dong_goi` thì không ép wrap theo STT. Nếu `nguoi_dong_goi` không hiện tên trường, vẫn phải dùng `nguoi_dong_goi_truncate_right_mm`/ô `Chừa phải` để giữ tương thích template cũ có phôi in sẵn và tránh đè dữ liệu lên vùng STT/phôi.
 
 ### 1. Race condition khi thêm/xóa chi tiết và đổi template — đã xử lý phần code
 **Vị trí**: `Services/Services.cs`, `Data/Repositories/Implementations/Repositories.cs`

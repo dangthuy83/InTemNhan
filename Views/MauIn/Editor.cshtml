@@ -304,10 +304,14 @@
                             <label class="form-label form-label-sm">
                                 Giới hạn wrap
                                 <i class="bi bi-info-circle text-muted ms-1"
-                                   title="Nếu STT đang hiện và X STT hợp lệ, Người đóng gói sẽ wrap trước X STT 1mm. Nếu STT ẩn hoặc X không hợp lệ thì không ép wrap."
+                                   title="Nếu Người đóng gói có hiện tên trường, wrap trước X STT 1mm. Nếu không hiện tên trường, dùng Chừa phải để tránh đè phôi in sẵn."
                                    data-bs-toggle="tooltip"></i>
                             </label>
-                            <div class="small text-muted" style="max-width:160px">Theo X của STT, chừa 1mm</div>
+                            <input type="number" id="pTruncateRight" class="form-control form-control-sm"
+                                   style="width:80px" step="0.5" min="0" onchange="applyP()" />
+                            <div class="small text-muted mt-1" style="max-width:180px">
+                                Không hiện tên trường: dùng giá trị này. Có hiện tên trường: theo X của STT, chừa 1mm.
+                            </div>
                         </div>
                     </div>
                     <div class="col">
@@ -502,7 +506,7 @@ const SAMPLE = {
 };
 
 let configs      = {};
-let truncateRight = @cfg.NguoiDongGoiTruncateRightMm;   // legacy: giữ nguyên khi lưu, wrap hiện theo X của STT
+let truncateRight = @cfg.NguoiDongGoiTruncateRightMm;
 let activeKey = null, dragKey = null, dragOX = 0, dragOY = 0;
 FIELDS.forEach(f => { configs[f.key] = {...f.cfg}; });
 
@@ -535,10 +539,21 @@ function fitTenSanPham(el, maxWidthPx, baseFontSizePt) {
 // ── Truncate người đóng gói ───────────────────────────────
 function getTruncateMaxWidthPx() {
     const packer = configs[TRUNCATE_FIELD_KEY];
-    const stt = configs.stt;
-    if (!packer || !stt || stt.hien_thi === false) return null;
+    if (!packer) return null;
 
+    const hasPackerPrefix = packer.hien_thi_nhan && String(packer.nhan || '').trim().length > 0;
     const xPacker = parseFloat(packer.x);
+    if (isNaN(xPacker)) return null;
+
+    if (!hasPackerPrefix) {
+        const rn = FV('rongNhan') || 91.95;
+        const tr = parseFloat(truncateRight) || 26;
+        return Math.max(10, rn - xPacker - tr) * SC;
+    }
+
+    const stt = configs.stt;
+    if (!stt || stt.hien_thi === false) return null;
+
     const xStt = parseFloat(stt.x);
     if (isNaN(xPacker) || isNaN(xStt) || xStt <= xPacker) return null;
 
@@ -722,6 +737,9 @@ function syncP() {
     G('pNhan').value          = c.nhan || '';
     document.querySelectorAll('#btnCC button').forEach(b=>
         b.classList.toggle('active', b.dataset.v===(c.can_chinh||'left')));
+    if (activeKey === TRUNCATE_FIELD_KEY) {
+        G('pTruncateRight').value = truncateRight;
+    }
 }
 
 function applyP() {
@@ -733,6 +751,9 @@ function applyP() {
     c.hien_thi=G('pHienThi').checked;
     c.hien_thi_nhan=G('pHienThiNhan').checked;
     c.nhan=G('pNhan').value;
+    if (activeKey === TRUNCATE_FIELD_KEY) {
+        truncateRight = parseFloat(G('pTruncateRight').value) || 26;
+    }
     buildList(); redraw();
 }
 
