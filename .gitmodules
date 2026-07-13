@@ -1,0 +1,3 @@
+[submodule ".ai-development-framework"]
+	path = .ai-development-framework
+	url = https://github.com/dangthuy83/AI-Development-Framework.git
