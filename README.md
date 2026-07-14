@@ -15,12 +15,12 @@ Commit migration baseline chỉ thêm `.gitmodules` và gitlink của Framework;
 
 ## Quick Start
 
-Các command sau đã được authority cho phép trong một verification session riêng nhưng chưa được chạy và xác minh trong documentation-remediation session này:
+Technical Baseline Verification được thực hiện ngày `2026-07-14` tại exact HEAD `88542d440c5b9dfabbf875866025ba0d9f277c69`:
 
 | Command | Trạng thái | Ghi chú |
 |---|---|---|
-| `dotnet restore` | Unverified | Chưa có retained output cho current baseline. |
-| `dotnet build` | Unverified | Chưa có retained output cho current baseline. |
+| `dotnet restore` | Verified | Exit code `0`, `0` warnings, `0` errors; packages đã up-to-date. Chưa chứng minh network download/cache-cold restore. |
+| `dotnet build` | Verified | Exit code `0`, `0` warnings, `0` errors; tạo `build/bin/Debug/net8.0/LabelPrint.dll`. Đây không phải runtime hoặc release verification. |
 | `dotnet run` | Unverified | Phải xác định đúng environment trước khi chạy; kết nối database thật cần approval riêng. |
 | `dotnet test` | Not configured | Chưa phát hiện test project. |
 

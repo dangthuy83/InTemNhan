@@ -6,7 +6,7 @@
 
 - Project/Product/Design/Decision/Roadmap/Task/Release authority: Đỗ Đăng Thủy.
 - Giao tiếp với project owner bằng tiếng Việt.
-- Last verified: `2026-07-13`.
+- Last verified: `2026-07-14`.
 - Documentation-migration baseline: `92fac6a21ae4f3f18739b06babb24925251bea2f`.
 
 ## Document map and read guidance
@@ -72,14 +72,16 @@ Không tự tách file hoặc đổi cấu trúc nếu chưa phân tích ảnh h
 
 ## Commands and verification
 
-Các command sau được authority cho phép trong verification session riêng, nhưng vẫn là Unverified cho đến khi được chạy trên exact target commit:
+Các command sau được authority cho phép trong verification session riêng. Trạng thái Verified chỉ áp dụng cho exact target commit và evidence được ghi tại đây:
 
 | Command | Current status | Boundary |
 |---|---|---|
-| `dotnet restore` | Unverified | Được phép trong verification session riêng |
-| `dotnet build` | Unverified | Được phép trong verification session riêng |
+| `dotnet restore` | Verified | HEAD `88542d4`, `2026-07-14`; exit code `0`, `0` warnings, `0` errors; chưa chứng minh network download/cache-cold restore |
+| `dotnet build` | Verified | HEAD `88542d4`, `2026-07-14`; exit code `0`, `0` warnings, `0` errors |
 | `dotnet run` | Unverified | Xác nhận environment trước khi chạy; DB thật cần approval riêng |
 | `dotnet test` | Not configured | Được phép nếu sau này có test project |
+
+Trong verification ngày `2026-07-14`, lần build đầu trong sandbox gặp `MSB3491` vì sandbox từ chối ghi generated cache; retry được approval ngoài sandbox đã thành công. Đây là evidence theo environment của session đó, không phải requirement rằng mọi build phải chạy outside sandbox.
 
 Không phát minh lint/test command. Không báo Pass khi command chưa chạy hoặc không có exact evidence.
 

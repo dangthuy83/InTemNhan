@@ -4,7 +4,7 @@
 
 ## Session handoff metadata
 
-- Cập nhật: `2026-07-13`, Asia/Bangkok.
+- Cập nhật: `2026-07-14`, Asia/Bangkok.
 - Cập nhật bởi: Codex theo approval của Đỗ Đăng Thủy.
 - Lifecycle: Đang phát triển và tiếp tục hoàn thiện.
 - Current milestone: Chưa được đặt tên chính thức.
@@ -12,39 +12,30 @@
 
 ## Current objective
 
-Current delivery objective chưa được Project owner quyết định. Documentation remediation theo AI Development Framework và read-only post-remediation documentation validation đã được thực hiện.
+Current delivery objective chưa được Project owner quyết định. Documentation remediation, post-remediation validation và Technical Baseline Verification đã được thực hiện.
 
 ## Active scope
 
-### In scope
-
-- Read-only post-remediation validation của chín Project Workspace files.
-- Kiểm tra ownership, links, anchors, Markdown structure, provenance và sensitive-data boundary.
-
-### Out of scope
-
-- Source code, configuration, schema và legacy memory changes.
-- Restore, build, test, run hoặc database command.
-- Cleanup `MEMORY/`, `bin/`, `obj/` hoặc `build/`.
-- Stage, commit hoặc push.
+Chưa có delivery scope đang active vì Project owner chưa chọn current objective và active task.
 
 ## Current status
 
-- Completion state: Documentation remediation completed; ready for owner review.
+- Completion state: Technical Baseline Verification `passed_with_limitations`; chưa có active delivery task.
 - Ứng dụng cơ bản đáp ứng nhu cầu ban đầu và đã được triển khai thực tế.
 - Exact deployed application commit: `f6432734ccc979dd6d8646debd6d0d54d1e2b24f`.
 - Documentation-migration baseline: `92fac6a21ae4f3f18739b06babb24925251bea2f`.
 - Framework pin: `804aea8d024b760ef853f1d5a182e5cc176d0990`.
 - Documentation remediation: Đã thực hiện.
 - Post-remediation documentation validation: Đã hoàn tất; links, anchors, Markdown structure, provenance, ownership và sensitive-data boundary đã được kiểm tra.
-- Technical verification: Chưa chạy trong session này.
+- Technical Baseline Verification: `dotnet restore` và `dotnet build` đã Verified ngày `2026-07-14` tại exact HEAD `88542d440c5b9dfabbf875866025ba0d9f277c69`.
+- Remaining limitations: cache-cold/network restore, `dotnet run`, runtime configuration, automated tests, database connection/schema, browser/render và physical print chưa được verified; `dotnet test` hiện Not configured.
 
 ## Confirmed continuation facts
 
 - Project/Product/Design/Decision/Roadmap/Task/Release authority: Đỗ Đăng Thủy — Source: owner confirmation.
 - `MEMORY/` được giữ làm supporting/historical source và không còn là Project SSOT — Source: [AGENTS.md](AGENTS.md).
 - Kết nối database thật và chạy `database/Schemas.sql` cần approval riêng — Source: [D-004](DECISIONS.md#d-004--database-schema-execution-boundary).
-- Restore/build/test/run được phép trong verification session riêng nhưng chưa verified — Source: [AGENTS.md#commands-and-verification](AGENTS.md#commands-and-verification).
+- Restore/build đã Verified tại exact HEAD `88542d440c5b9dfabbf875866025ba0d9f277c69`; run chưa verified và test chưa configured — Source: [AGENTS.md#commands-and-verification](AGENTS.md#commands-and-verification).
 
 ## Blockers, gaps and pending approvals
 
@@ -57,9 +48,8 @@ Current delivery objective chưa được Project owner quyết định. Documen
 
 ## Next actions
 
-1. Project owner review completion report và remaining gaps.
-2. Project owner chọn current objective/active task tiếp theo.
-3. Thực hiện technical verification trong session riêng nếu được yêu cầu.
+1. Project owner chọn current objective và active task tiếp theo.
+2. Giữ các verification limitation còn lại explicit; chỉ mở verification scope mới khi có authority phù hợp.
 
 ## Relevant source links
 
