@@ -28,7 +28,7 @@
                     <tr class="text-center">
                         <th>Tên SP</th><th>Mã code</th><th>Phiếu SP</th><th>Loại giấy</th>
                         <th>SL SP</th><th>SL Nhãn</th>
-                        <th>Ca SX</th><th>Người kiểm</th><th>Người đóng gói</th><th>Ngày SX</th><th>Thời gian in</th><th>Máy</th>
+                        <th>Ca SX</th><th>Người kiểm</th><th>Người đóng gói</th><th>Ngày SX</th><th>Thời gian in</th><th>Mẫu in</th><th>Máy</th>
                         <th style="width:150px"> Hành động</th>
                     </tr>
                 </thead>
@@ -46,6 +46,16 @@
                         <td class="small">@ls.NguoiDongGoi</td>
                         <td class="small">@ls.NgaySanXuat?.ToString("dd/MM/yyyy")</td>
                         <td class="small text-muted">@ls.ThoiGianTaoTem.ToString("dd/MM/yyyy HH:mm")</td>
+                        <td class="small text-muted" style="white-space:nowrap" title="@(ls.TenMauIn ?? (ls.MaMauIn.HasValue ? $"Mẫu #{ls.MaMauIn}" : "Chưa ghi nhận"))">
+                            @if (!string.IsNullOrWhiteSpace(ls.TenMauIn)) {
+                                <span>@ls.TenMauIn</span>
+                                @if (ls.MaMauIn.HasValue) { <span class="text-muted">#@ls.MaMauIn</span> }
+                            } else if (ls.MaMauIn.HasValue) {
+                                <span>Mẫu #@ls.MaMauIn</span>
+                            } else {
+                                <span class="text-muted fst-italic">Chưa ghi nhận</span>
+                            }
+                        </td>
                         <td class="small text-muted">@ls.TenMayTinh</td>
                         <td>
                             <div class="d-flex gap-1">

@@ -35,6 +35,16 @@
 - Repository: <https://github.com/dangthuy83/AI-Development-Framework.git>.
 - Pinned commit: `804aea8d024b760ef853f1d5a182e5cc176d0990`.
 
+## Completed changes
+
+### `2026-07-15` — Lịch sử in tem hiển thị mẫu in đã sử dụng
+
+- Status: Completed.
+- Release/deployment status: Chưa ghi nhận triển khai.
+- User impact: Màn hình lịch sử in tem và tìm kiếm tem cũ hiển thị mẫu in sau cột thời gian in, ưu tiên snapshot tên mẫu trong lịch sử và fallback rõ ràng cho dữ liệu cũ thiếu mẫu.
+- Scope: Không thêm cột mẫu in vào Excel export.
+- Verification: `dotnet build` exit code `0`, `0` warnings, `0` errors.
+
 ## Historical changes pending classification
 
 Legacy `MEMORY/` và Git history chứa completed-change candidates nhưng chưa được promote thành Changelog entries riêng. Mỗi entry cần review provenance, completion evidence và user impact trước khi được ghi ở đây.

@@ -64,6 +64,14 @@ Hệ thống hiện ghi nhận số lần in lại. Lịch sử chi tiết của
 
 Nguồn authority cho ba behavior trên: [D-001](DECISIONS.md#d-001--in-lại-sử-dụng-template-hiện-hành).
 
+### BR-004 — Lịch sử hiển thị mẫu in đã sử dụng
+
+Màn hình lịch sử in tem hiển thị thông tin mẫu in đã được ghi nhận tại thời điểm in. Hệ thống ưu tiên snapshot tên mẫu trong lịch sử; nếu dữ liệu cũ thiếu tên mẫu thì fallback theo mã mẫu nếu có, hoặc hiển thị trạng thái chưa ghi nhận.
+
+Từ khóa tìm kiếm/lọc lịch sử có thể khớp theo tên mẫu hoặc mã mẫu. Excel export lịch sử hiện không thêm cột mẫu in.
+
+Nguồn authority: [D-005](DECISIONS.md#d-005--hiển-thị-snapshot-tên-mẫu-in-trong-lịch-sử).
+
 ## Product-level acceptance expectations
 
 Chưa quyết định.

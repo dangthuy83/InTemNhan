@@ -16,6 +16,7 @@
 | D-002 | Controller–Service–Repository là preferred pattern | Accepted | 2026-07-13 |
 | D-003 | Direct repository access trong hai controller là current design | Accepted | 2026-07-13 |
 | D-004 | `Schemas.sql` là production script với approval gate | Accepted | 2026-07-13 |
+| D-005 | Hiển thị snapshot tên mẫu in trong lịch sử | Accepted | 2026-07-15 |
 
 ## D-001 — In lại sử dụng template hiện hành
 
@@ -123,3 +124,33 @@ Explicit approval gate bảo vệ dữ liệu thật và buộc người thực 
 - Script không thuộc normal restore/build/test/run verification.
 - Không được tự động thực thi.
 - Repository file không tự chứng minh live database đang khớp schema.
+
+## D-005 — Hiển thị snapshot tên mẫu in trong lịch sử
+
+- Status: Accepted.
+- Date: `2026-07-15`.
+- Decision authority: Đỗ Đăng Thủy.
+- Related sources: `Views/LichSu/Index.cshtml`, `Views/LichSu/TimKiem.cshtml`, `Data/Repositories/Implementations/Repositories.cs`, `database/Schemas.sql`.
+- Supersession: Không supersede [D-001](#d-001--in-lại-sử-dụng-template-hiện-hành); làm rõ rằng lịch sử hiển thị snapshot metadata của mẫu in nhưng reprint vẫn dùng template hiện hành theo `ma_mau_in`.
+
+### Context
+
+Người dùng cần biết mỗi tem trong lịch sử đã được in bằng mẫu nào. Schema hiện có `ma_mau_in`, `ten_mau_in` và `kho_giay` trong `lich_su_in_tem`; procedure đóng phiên ghi các giá trị này từ mẫu đang gắn với phiên tại thời điểm in.
+
+### Decision
+
+- Màn hình lịch sử in tem hiển thị mẫu in sau cột thời gian in.
+- Giá trị hiển thị ưu tiên snapshot `ten_mau_in` trong lịch sử.
+- Nếu thiếu `ten_mau_in` nhưng có `ma_mau_in`, hiển thị fallback theo mã mẫu.
+- Nếu thiếu cả tên và mã mẫu, hiển thị trạng thái chưa ghi nhận.
+- Từ khóa tìm kiếm/lọc lịch sử có thể khớp theo tên mẫu hoặc mã mẫu.
+- Excel export lịch sử không thêm cột mẫu in trong phạm vi decision này.
+
+### Rationale
+
+Snapshot tên mẫu trong lịch sử giúp người dùng biết mẫu đã sử dụng tại thời điểm in, kể cả khi mẫu hiện tại đã đổi tên hoặc không còn dùng nữa. Việc này không yêu cầu lưu snapshot layout/template đầy đủ và không thay đổi behavior in lại đã được chấp thuận ở D-001.
+
+### Consequences
+
+- Lịch sử cũ thiếu thông tin mẫu cần fallback rõ ràng thay vì tự suy từ mẫu hiện tại.
+- Nếu sau này cần audit đầy đủ layout hoặc version mẫu, phải có thiết kế schema/decision riêng.

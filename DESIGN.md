@@ -74,6 +74,7 @@ Project chủ động gom nhiều class vào các shared files:
 - Dapper dùng `MatchNamesWithUnderscores = true`.
 - `DateOnlyTypeHandler` được đăng ký trong startup.
 - Repository hiện dùng MySQL user variable trong một query renumber; connection configuration phải hỗ trợ behavior này.
+- `lich_su_in_tem` lưu metadata mẫu in tại thời điểm đóng phiên gồm `ma_mau_in`, `ten_mau_in` và `kho_giay`; lịch sử ưu tiên hiển thị snapshot `ten_mau_in` thay vì join tên mẫu hiện tại.
 - Runtime có thể tải shared configuration theo path cấu hình hoặc dùng local configuration fallback.
 - Raw credential, connection string, internal IP và hostname không thuộc tài liệu project.
 - Runtime machine mapping là sensitive local configuration, không phải Project Knowledge.
@@ -107,6 +108,7 @@ Source hiện có transaction, row locking và uniqueness protection cho một s
 - Frontend là server-rendered Razor Views, dùng Bootstrap-based UI.
 - Người dùng thao tác bằng trình duyệt trong LAN.
 - Project có nhập liệu phiên in, lịch sử, cấu hình, template editor và print preview.
+- Màn hình lịch sử in tem hiển thị mẫu in sau cột thời gian in; dữ liệu cũ thiếu mẫu dùng fallback hiển thị rõ ràng.
 - Physical print output phải phù hợp phôi in sẵn.
 - Responsive, accessibility và Visual QA acceptance chưa được authority xác định đầy đủ.
 - Impeccable profile chưa được xác định; thiếu capability không được làm thay đổi Product behavior hoặc stack.

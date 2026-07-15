@@ -4,7 +4,7 @@
 
 ## Session handoff metadata
 
-- Cập nhật: `2026-07-14`, Asia/Bangkok.
+- Cập nhật: `2026-07-15`, Asia/Bangkok.
 - Cập nhật bởi: Codex theo approval của Đỗ Đăng Thủy.
 - Lifecycle: Đang phát triển và tiếp tục hoàn thiện.
 - Current milestone: Chưa được đặt tên chính thức.
@@ -12,15 +12,16 @@
 
 ## Current objective
 
-Current delivery objective chưa được Project owner quyết định. Documentation remediation, post-remediation validation và Technical Baseline Verification đã được thực hiện.
+Current delivery objective chưa được Project owner quyết định. Phiên `2026-07-15` đã hoàn tất task hiển thị mẫu in đã sử dụng trong lịch sử in tem và chuẩn bị handoff cho candidate `MauIn/Editor`.
 
 ## Active scope
 
-Chưa có delivery scope đang active vì Project owner chưa chọn current objective và active task.
+Chưa có delivery scope đang active. Candidate tiếp theo do Project owner nêu: sửa `MauIn/Editor` để đổi được mẫu in mặc định và bảo đảm tên trường vẫn hiển thị khi field value rỗng nếu đã bật hiện tên trường.
 
 ## Current status
 
-- Completion state: Technical Baseline Verification `passed_with_limitations`; chưa có active delivery task.
+- Completion state: Task hiển thị mẫu in trong lịch sử `completed`; Technical Baseline Verification trước đó `passed_with_limitations`.
+- Lịch sử in tem hiện hiển thị mẫu in sau cột thời gian in, dùng snapshot `ten_mau_in`/fallback theo `ma_mau_in`, và tìm kiếm/lọc hỗ trợ tên/mã mẫu; Excel export không thêm cột mẫu in theo yêu cầu.
 - Ứng dụng cơ bản đáp ứng nhu cầu ban đầu và đã được triển khai thực tế.
 - Exact deployed application commit: `f6432734ccc979dd6d8646debd6d0d54d1e2b24f`.
 - Documentation-migration baseline: `92fac6a21ae4f3f18739b06babb24925251bea2f`.
@@ -28,6 +29,7 @@ Chưa có delivery scope đang active vì Project owner chưa chọn current obj
 - Documentation remediation: Đã thực hiện.
 - Post-remediation documentation validation: Đã hoàn tất; links, anchors, Markdown structure, provenance, ownership và sensitive-data boundary đã được kiểm tra.
 - Technical Baseline Verification: `dotnet restore` và `dotnet build` đã Verified ngày `2026-07-14` tại exact HEAD `88542d440c5b9dfabbf875866025ba0d9f277c69`.
+- Delivery verification `2026-07-15`: `dotnet build` exit code `0`, `0` warnings, `0` errors sau thay đổi lịch sử mẫu in.
 - Remaining limitations: cache-cold/network restore, `dotnet run`, runtime configuration, automated tests, database connection/schema, browser/render và physical print chưa được verified; `dotnet test` hiện Not configured.
 
 ## Confirmed continuation facts

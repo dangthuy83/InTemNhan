@@ -221,7 +221,13 @@ public class LichSuRepository(IDbConnectionFactory db) : ILichSuRepository
         using var conn = db.CreateConnection();
         var kw = $"%{keyword}%";
         return (await conn.QueryAsync<LichSuInTem>(
-            "SELECT * FROM lich_su_in_tem WHERE ten_san_pham LIKE @kw OR ma_code LIKE @kw OR phieu_san_pham LIKE @kw ORDER BY thoi_gian_tao_tem DESC LIMIT 200",
+            @"SELECT * FROM lich_su_in_tem
+              WHERE ten_san_pham LIKE @kw
+                 OR ma_code LIKE @kw
+                 OR phieu_san_pham LIKE @kw
+                 OR ten_mau_in LIKE @kw
+                 OR CAST(ma_mau_in AS CHAR) LIKE @kw
+              ORDER BY thoi_gian_tao_tem DESC LIMIT 200",
             new { kw })).ToList();
     }
     public async Task XoaAsync(int maLichSu)
@@ -237,7 +243,7 @@ public class LichSuRepository(IDbConnectionFactory db) : ILichSuRepository
         var p   = new DynamicParameters();
         if (!string.IsNullOrWhiteSpace(tuNgay))  { sql += " AND DATE(thoi_gian_tao_tem)>=@tuNgay";  p.Add("tuNgay",  tuNgay);  }
         if (!string.IsNullOrWhiteSpace(denNgay)) { sql += " AND DATE(thoi_gian_tao_tem)<=@denNgay"; p.Add("denNgay", denNgay); }
-        if (!string.IsNullOrWhiteSpace(keyword)) { sql += " AND (ten_san_pham LIKE @kw OR ma_code LIKE @kw OR phieu_san_pham LIKE @kw)"; p.Add("kw",$"%{keyword}%"); }
+        if (!string.IsNullOrWhiteSpace(keyword)) { sql += " AND (ten_san_pham LIKE @kw OR ma_code LIKE @kw OR phieu_san_pham LIKE @kw OR ten_mau_in LIKE @kw OR CAST(ma_mau_in AS CHAR) LIKE @kw)"; p.Add("kw",$"%{keyword}%"); }
         if (!string.IsNullOrWhiteSpace(tenMay))  { sql += " AND ten_may_tinh LIKE @tenMay"; p.Add("tenMay",$"%{tenMay}%"); }
         sql += " ORDER BY thoi_gian_tao_tem DESC LIMIT 500";
         return (await conn.QueryAsync<LichSuInTem>(sql, p)).ToList();
