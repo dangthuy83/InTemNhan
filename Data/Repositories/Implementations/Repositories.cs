@@ -296,13 +296,31 @@ public class MauInRepository(IDbConnectionFactory db) : IMauInRepository
     public async Task CapNhatAsync(MauIn m)
     {
         using var conn = db.CreateConnection();
-        await conn.ExecuteAsync("UPDATE mau_in SET ten_mau=@TenMau,kho_giay=@KhoGiay,so_nhan_moi_trang=@SoNhanMoiTrang,cau_hinh_truong=@CauHinhTruong,la_mac_dinh=@LaMacDinh,ghi_chu=@GhiChu WHERE ma_mau_in=@MaMauIn", m);
+        await conn.ExecuteAsync("UPDATE mau_in SET ten_mau=@TenMau,kho_giay=@KhoGiay,so_nhan_moi_trang=@SoNhanMoiTrang,cau_hinh_truong=@CauHinhTruong,ghi_chu=@GhiChu WHERE ma_mau_in=@MaMauIn", m);
     }
     public async Task SetMacDinhAsync(int maMauIn)
     {
         using var conn = db.CreateConnection();
-        await conn.ExecuteAsync("UPDATE mau_in SET la_mac_dinh=0");
-        if (maMauIn > 0) await conn.ExecuteAsync("UPDATE mau_in SET la_mac_dinh=1 WHERE ma_mau_in=@maMauIn", new { maMauIn });
+        conn.Open();
+        using var tx = conn.BeginTransaction();
+        try
+        {
+            var exists = await conn.ExecuteScalarAsync<int>(
+                "SELECT COUNT(*) FROM mau_in WHERE ma_mau_in=@maMauIn",
+                new { maMauIn }, transaction: tx);
+            if (exists == 0) throw new InvalidOperationException("Không tìm thấy template.");
+
+            await conn.ExecuteAsync("UPDATE mau_in SET la_mac_dinh=0", transaction: tx);
+            await conn.ExecuteAsync(
+                "UPDATE mau_in SET la_mac_dinh=1 WHERE ma_mau_in=@maMauIn",
+                new { maMauIn }, transaction: tx);
+            tx.Commit();
+        }
+        catch
+        {
+            tx.Rollback();
+            throw;
+        }
     }
     public async Task XoaAsync(int maMauIn)
     {

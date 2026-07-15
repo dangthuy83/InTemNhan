@@ -986,7 +986,7 @@ G('btnLuu').addEventListener('click', async()=>{
     G('toast').innerHTML=`<div class="toast show align-items-center text-bg-${res.success?'success':'danger'} border-0">
         <div class="d-flex"><div class="toast-body">${res.message}</div></div></div>`;
     setTimeout(()=>G('toast').innerHTML='',2500);
-    if(res.success&&req.maMauIn===0) location.href='/MauIn/Editor?maMauIn='+res.data;
+    if(res.success) location.href='/MauIn/Editor?maMauIn='+res.data;
 });
 
 syncBulkXInput();

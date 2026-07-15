@@ -39,6 +39,9 @@
     bool ShowPrefix(CauHinhTruong f) =>
         f.HienThiNhan && !string.IsNullOrWhiteSpace(f.Nhan);
 
+    bool HasRenderableValue(CauHinhTruong f, string? value) =>
+        ShowPrefix(f) || !string.IsNullOrEmpty(value);
+
     string FieldClass(CauHinhTruong f, string extra = "")
     {
         var cls = extra;
@@ -139,10 +142,10 @@ body{background:#e5e5e5;font-family:Arial,sans-serif;}
           @if(cfg.PhieuSanPham.HienThi){<span class="@FieldClass(cfg.PhieuSanPham)" data-label-x-mm="@DataX(cfg.PhieuSanPham)" style="@FieldStyle(cfg.PhieuSanPham)">@if (ShowPrefix(cfg.PhieuSanPham)) { <span class="field-prefix">@cfg.PhieuSanPham.Nhan</span><span class="field-colon">:</span><span class="field-value">@lb.PhieuSanPham</span> } else { @lb.PhieuSanPham }</span>}
           @if(cfg.TenLoaiGiay.HienThi){<span class="@FieldClass(cfg.TenLoaiGiay)" data-label-x-mm="@DataX(cfg.TenLoaiGiay)" style="@FieldStyle(cfg.TenLoaiGiay)">@if (ShowPrefix(cfg.TenLoaiGiay)) { <span class="field-prefix">@cfg.TenLoaiGiay.Nhan</span><span class="field-colon">:</span><span class="field-value">@lb.TenLoaiGiay</span> } else { @lb.TenLoaiGiay }</span>}
           @if(cfg.SoLuong.HienThi){<span class="@FieldClass(cfg.SoLuong)" data-label-x-mm="@DataX(cfg.SoLuong)" style="@FieldStyle(cfg.SoLuong)">@if (ShowPrefix(cfg.SoLuong)) { <span class="field-prefix">@cfg.SoLuong.Nhan</span><span class="field-colon">:</span><span class="field-value">@lb.SoLuong</span> } else { @lb.SoLuong }</span>}
-          @if(cfg.TenCa.HienThi && !string.IsNullOrEmpty(lb.TenCa)){<span class="@FieldClass(cfg.TenCa)" data-label-x-mm="@DataX(cfg.TenCa)" style="@FieldStyle(cfg.TenCa)">@if (ShowPrefix(cfg.TenCa)) { <span class="field-prefix">@cfg.TenCa.Nhan</span><span class="field-colon">:</span><span class="field-value">@lb.TenCa</span> } else { @lb.TenCa }</span>}
-          @if(cfg.NgaySanXuat.HienThi && !string.IsNullOrEmpty(lb.NgaySanXuat)){<span class="@FieldClass(cfg.NgaySanXuat)" data-label-x-mm="@DataX(cfg.NgaySanXuat)" style="@FieldStyle(cfg.NgaySanXuat)">@if (ShowPrefix(cfg.NgaySanXuat)) { <span class="field-prefix">@cfg.NgaySanXuat.Nhan</span><span class="field-colon">:</span><span class="field-value">@lb.NgaySanXuat</span> } else { @lb.NgaySanXuat }</span>}
-          @if(cfg.NguoiKiem.HienThi && !string.IsNullOrEmpty(lb.NguoiKiem)){<span class="@FieldClass(cfg.NguoiKiem)" data-label-x-mm="@DataX(cfg.NguoiKiem)" style="@FieldStyle(cfg.NguoiKiem)">@if (ShowPrefix(cfg.NguoiKiem)) { <span class="field-prefix">@cfg.NguoiKiem.Nhan</span><span class="field-colon">:</span><span class="field-value">@lb.NguoiKiem</span> } else { @lb.NguoiKiem }</span>}
-          @if(cfg.NguoiDongGoi.HienThi && !string.IsNullOrEmpty(lb.NguoiDongGoi)){
+          @if(cfg.TenCa.HienThi && HasRenderableValue(cfg.TenCa, lb.TenCa)){<span class="@FieldClass(cfg.TenCa)" data-label-x-mm="@DataX(cfg.TenCa)" style="@FieldStyle(cfg.TenCa)">@if (ShowPrefix(cfg.TenCa)) { <span class="field-prefix">@cfg.TenCa.Nhan</span><span class="field-colon">:</span><span class="field-value">@lb.TenCa</span> } else { @lb.TenCa }</span>}
+          @if(cfg.NgaySanXuat.HienThi && HasRenderableValue(cfg.NgaySanXuat, lb.NgaySanXuat)){<span class="@FieldClass(cfg.NgaySanXuat)" data-label-x-mm="@DataX(cfg.NgaySanXuat)" style="@FieldStyle(cfg.NgaySanXuat)">@if (ShowPrefix(cfg.NgaySanXuat)) { <span class="field-prefix">@cfg.NgaySanXuat.Nhan</span><span class="field-colon">:</span><span class="field-value">@lb.NgaySanXuat</span> } else { @lb.NgaySanXuat }</span>}
+          @if(cfg.NguoiKiem.HienThi && HasRenderableValue(cfg.NguoiKiem, lb.NguoiKiem)){<span class="@FieldClass(cfg.NguoiKiem)" data-label-x-mm="@DataX(cfg.NguoiKiem)" style="@FieldStyle(cfg.NguoiKiem)">@if (ShowPrefix(cfg.NguoiKiem)) { <span class="field-prefix">@cfg.NguoiKiem.Nhan</span><span class="field-colon">:</span><span class="field-value">@lb.NguoiKiem</span> } else { @lb.NguoiKiem }</span>}
+          @if(cfg.NguoiDongGoi.HienThi && HasRenderableValue(cfg.NguoiDongGoi, lb.NguoiDongGoi)){
             var nguoiDongGoiMaxWidth = NguoiDongGoiMaxWidthMm(cfg.NguoiDongGoi);
             var nguoiDongGoiMaxWidthAttr = nguoiDongGoiMaxWidth.HasValue
                 ? nguoiDongGoiMaxWidth.Value.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)
@@ -155,7 +158,7 @@ body{background:#e5e5e5;font-family:Arial,sans-serif;}
               else { @lb.NguoiDongGoi }
             </span>
           }
-          @if(cfg.Stt.HienThi && !string.IsNullOrEmpty(lb.Stt)){<span class="@FieldClass(cfg.Stt)" data-label-x-mm="@DataX(cfg.Stt)" style="@FieldStyle(cfg.Stt)">@if (ShowPrefix(cfg.Stt)) { <span class="field-prefix">@cfg.Stt.Nhan</span><span class="field-colon">:</span><span class="field-value">@lb.Stt</span> } else { @lb.Stt }</span>}
+          @if(cfg.Stt.HienThi && HasRenderableValue(cfg.Stt, lb.Stt)){<span class="@FieldClass(cfg.Stt)" data-label-x-mm="@DataX(cfg.Stt)" style="@FieldStyle(cfg.Stt)">@if (ShowPrefix(cfg.Stt)) { <span class="field-prefix">@cfg.Stt.Nhan</span><span class="field-colon">:</span><span class="field-value">@lb.Stt</span> } else { @lb.Stt }</span>}
           }
         </div>
       }

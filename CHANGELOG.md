@@ -45,6 +45,14 @@
 - Scope: Không thêm cột mẫu in vào Excel export.
 - Verification: `dotnet build` exit code `0`, `0` warnings, `0` errors.
 
+### `2026-07-15` — Sửa `MauIn/Editor` đổi mẫu mặc định và hiển thị label rỗng
+
+- Status: Completed.
+- Release/deployment status: Chưa ghi nhận triển khai.
+- User impact: Người dùng có thể lưu/đổi mẫu in mặc định với trạng thái editor nhất quán sau khi lưu; print preview/output vẫn hiển thị tên trường khi field value rỗng nếu cấu hình đã bật hiện tên trường.
+- Scope: Không thay đổi schema, không truy cập database thật, không thay đổi physical-print calibration.
+- Verification: `dotnet build` exit code `0`, `0` warnings, `0` errors.
+
 ## Historical changes pending classification
 
 Legacy `MEMORY/` và Git history chứa completed-change candidates nhưng chưa được promote thành Changelog entries riêng. Mỗi entry cần review provenance, completion evidence và user impact trước khi được ghi ở đây.
